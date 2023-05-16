@@ -21,7 +21,6 @@ using LibPQ: LibPQ, Connection, execute, load!,
              Dates, DateTime, Dates.CompoundPeriod, Dates.canonicalize, Second, Year, Month, Week, Dates.format, now, unix2datetime, Day, Date, Hour, year, Minute,
              # Tables
              Tables, rowtable
-using Parameters: Parameters, @unpack
 import Base: show, summary, isless
 # Constants
 """
@@ -69,6 +68,5 @@ export GitHubPersonalAccessToken, queries, setup, setup_parallel,
        generate_search_query, graphql, JSON3, @sync, @distributed,
        licenses, find_queries, find_repos, query_commits_simple, query_commits,
        now, CompoundPeriod, canonicalize,
-       groupby,
-       @unpack
+       groupby
 end

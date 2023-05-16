@@ -1,6 +1,6 @@
 using GHOST
 setup()
-@unpack conn, schema, pat = GHOST.PARALLELENABLER
+(;conn, schema, pat) = GHOST.PARALLELENABLER
 
 users = execute(conn,
                 """

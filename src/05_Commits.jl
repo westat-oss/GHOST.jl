@@ -34,7 +34,7 @@ end
     query_commits(branch::AbstractString)::Nothing
 """
 function query_commits(branch::AbstractString)::Nothing
-    @unpack conn, schema = GHOST.PARALLELENABLER
+    (;conn, schema) = GHOST.PARALLELENABLER
     since = execute(conn, "SELECT MIN(committedat) AS since FROM $(schema).commits WHERE branch = '$branch';") |>
         (obj -> only(getproperty.(obj, :since)))
     since = coalesce(since, GHOST.GH_FIRST_REPO_TS)
@@ -142,7 +142,7 @@ end
     query_commits(branches::AbstractVector{<:AbstractString}, batch_size::Integer)::Nothing
 """
 function query_commits(branches::AbstractVector{<:AbstractString}, batch_size::Integer)::Nothing
-    @unpack conn, schema = PARALLELENABLER
+    (;conn, schema) = PARALLELENABLER
     output = DataFrame(vcat(fill(String, 4), fill(Vector{Union{Missing,String}}, 3), fill(Int, 2)),
                        [:branch, :id, :sha1, :committed_ts, :emails, :names, :users, :additions, :deletions],
                        0)

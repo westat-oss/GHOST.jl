@@ -4,7 +4,7 @@
 Return count of search results based on the license for each created interval.
 """
 function query_intervals(created::Vector{Interval{DateTime,Closed,Open}})
-    @unpack pat, spdx = PARALLELENABLER
+    (;pat, spdx) = PARALLELENABLER
     subsquery = join([ string("_$idx:search(query:\"is:public fork:false mirror:false archived:false license:$spdx created:",
                        format(created[idx].first, "yyyy-mm-ddTHH:MM:SS\\Z"),
                        "..",
@@ -119,7 +119,7 @@ This will upload the queries to the database with:
 function queries(spdx::AbstractString)
     # spdx = "mit"
     # schema = "gh_2007_$(Dates.year(floor(now(), Year) - Day(1)))"
-    @unpack conn, schema = PARALLELENABLER
+    (;conn, schema) = PARALLELENABLER
     @everywhere GHOST.PARALLELENABLER.spdx = $spdx
     calendaryear = parse(Int, schema[end - 3:end])
     created = vcat(floor(GH_FIRST_REPO_TS, Day),
@@ -151,12 +151,17 @@ function queries(spdx::AbstractString)
     data[!,:spdx] .= spdx
     sort!(data, :created)
     execute(conn, "BEGIN;")
+    statement = string(
+        "INSERT INTO ",
+        schema,
+        ".queries",
+        " (spdx, created, count) VALUES (",
+        join(("\$$i" for i in 1:3), ','),
+        ") ON CONFLICT ON CONSTRAINT nonoverlappingqueries DO NOTHING;"
+    )
     load!(data[!,[:spdx,:created,:count]],
           conn,
-          """
-          INSERT INTO $schema.queries (spdx, created, count) VALUES ($(join(("\$$i" for i in 1:3), ',')))
-          ON CONFLICT ON CONSTRAINT nonoverlappingqueries DO NOTHING;
-          """,
+          statement,
           )
     execute(conn, "COMMIT;")
     nothing

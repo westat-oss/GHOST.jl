@@ -1,8 +1,7 @@
 using GHOST
-using GHOST: @unpack
 setup()
 setup_parallel()
-@unpack conn, schema = GHOST.PARALLELENABLER
+(;conn, schema) = GHOST.PARALLELENABLER
 data = execute(conn,
                String(read(joinpath(pkgdir(GHOST), "src", "assets", "sql", "branches_min_max.sql"))) |>
                    (obj -> replace(obj, "schema" => schema)) |>
@@ -11,9 +10,6 @@ data = execute(conn,
                not_null = true) |>
     (obj -> getproperty.(obj, :branch))
 time_start = now()
-
-idx = (1:8:500)[6]
-query_commits(view(data, idx:min(idx + 7, lastindex(data))), 100)
 
 println(time_start)
 # @sync @distributed for idx in 1:8:500

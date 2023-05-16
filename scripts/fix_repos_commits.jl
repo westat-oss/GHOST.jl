@@ -1,11 +1,11 @@
 using GHOST
-using GHOST: @unpack, @everywhere, READY, remotecall, load!
+using GHOST: @everywhere, READY, remotecall, load!
 setup()
 time_start = now()
 println(time_start)
 setup_parallel()
 
-@unpack conn, schema, pat = GHOST.PARALLELENABLER
+(;conn, schema, pat) = GHOST.PARALLELENABLER
 data = execute(conn,
                "SELECT branch FROM $(schema).repos WHERE status = 'Init' ORDER BY commits;",
                not_null = true) |>
@@ -19,11 +19,11 @@ function magic(nodes::AbstractVector)
     try
         if :data ∈ propertynames(json)
             x = DataFrame((;x.id, x.target.history.totalCount) for x in (x for x in json.data.nodes if !isnothing(x)))
-            load!(x, GHOST.PARALLELENABLER.conn, "INSERT INTO gh_2007_2020.repos_chk VALUES(\$1,\$2) ON CONFLICT DO NOTHING;")
+            load!(x, GHOST.PARALLELENABLER.conn, "INSERT INTO $schema.repos_chk VALUES(\$1,\$2) ON CONFLICT DO NOTHING;")
         end
         if :errors ∈ propertynames(json)
             y = [ (branch = SubString(x.message, 52, length(x.message) - 2), commits = 0) for x in values(json.errors) ]
-            load!(y, GHOST.PARALLELENABLER.conn, "INSERT INTO gh_2007_2020.repos_chk VALUES(\$1,\$2) ON CONFLICT DO NOTHING;")
+            load!(y, GHOST.PARALLELENABLER.conn, "INSERT INTO $schema.repos_chk VALUES(\$1,\$2) ON CONFLICT DO NOTHING;")
         end
     catch err
         println("Error in: $nodes")

@@ -1,11 +1,17 @@
 using GHOST
-using GHOST: @unpack, groupby
+using GHOST: groupby
 using Distributed
 setup()
 setup_parallel(2)
-@unpack conn, schema = GHOST.PARALLELENABLER
+(;conn, schema) = GHOST.PARALLELENABLER
 
-data = execute(conn, String(read(joinpath(pkgdir(GHOST), "src",  "assets", "sql", "queries_batches.sql"))), not_null = true) |>
+data = execute(
+    conn,
+    replace(
+        String(read(joinpath(pkgdir(GHOST), "src",  "assets", "sql", "queries_batches.sql"))),
+        "schema" => schema
+    ),
+    not_null = true) |>
     DataFrame |>
     (df -> groupby(df, [:queries, :query_group]));
 data = [ data[k] for k in keys(data) ];

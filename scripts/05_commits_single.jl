@@ -1,16 +1,15 @@
 using GHOST
-using GHOST: @unpack, @everywhere, READY, remotecall
+using GHOST: @everywhere, READY, remotecall
 setup()
 time_start = now()
 println(time_start)
 setup_parallel()
 
-@unpack conn, schema, pat = GHOST.PARALLELENABLER
+(;conn, schema, pat) = GHOST.PARALLELENABLER
 data = execute(conn,
                "SELECT branch FROM $(schema).repos WHERE status = 'Init' ORDER BY commits;",
                not_null = true) |>
     (obj -> getproperty.(obj, :branch))
-branch = data[3]
 
 println(now())
 for branch in data

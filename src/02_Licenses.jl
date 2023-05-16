@@ -28,7 +28,7 @@ function licenses()
                            for license in obj.licenses if license.isOsiApproved ]))
     # Keep only licenses that are machine detectable with Licensee
     filter!(license -> uppercase(license.spdx) ∈ licensee.spdx, spdx.spdx)
-    @unpack conn, schema = PARALLELENABLER
+    (;conn, schema) = PARALLELENABLER
     execute(conn, "TRUNCATE TABLE $schema.licenses CASCADE;")
     execute(conn, "BEGIN;")
     load!(spdx.spdx, conn, "INSERT INTO $schema.licenses VALUES ($(join(("\$$i" for i in 1:2), ','))) ON CONFLICT DO NOTHING;")

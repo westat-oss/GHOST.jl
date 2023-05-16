@@ -190,7 +190,7 @@ end
 Setup workers.
 """
 function setup_parallel(limit::Integer = 0; password::AbstractString = get(ENV, "PGPASSWORD", "postgres"))
-    @unpack conn, schema = PARALLELENABLER
+    (;conn, schema) = PARALLELENABLER
     io = IOBuffer()
     show(io, conn)
     s = String(take!(io))

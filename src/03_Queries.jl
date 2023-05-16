@@ -157,7 +157,7 @@ function queries(spdx::AbstractString)
         ".queries",
         " (spdx, created, count) VALUES (",
         join(("\$$i" for i in 1:3), ','),
-        "ON CONFLICT ON CONSTRAINT nonoverlappingqueries DO NOTHING;"
+        ") ON CONFLICT ON CONSTRAINT nonoverlappingqueries DO NOTHING;"
     )
     load!(data[!,[:spdx,:created,:count]],
           conn,

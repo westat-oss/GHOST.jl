@@ -13,7 +13,10 @@ pats = [ GitHubPersonalAccessToken(split(pat, ':')...) for pat in filter!(!isemp
         queries(spdx)
     end
     data = execute(GHOST.PARALLELENABLER.conn,
-                   String(read(joinpath(pkgdir(GHOST), "src",  "assets", "sql", "queries_batches.sql"))),
+                   replace(
+                       String(read(joinpath(pkgdir(GHOST), "src",  "assets", "sql", "queries_batches.sql"))),
+                       "schema" => GHOST.PARALLELENABLER.schema
+                   ),
                    not_null = true) |>
         DataFrame |>
         (df -> groupby(df, [:queries, :query_group]));

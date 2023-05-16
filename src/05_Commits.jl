@@ -38,9 +38,17 @@ function query_commits(branch::AbstractString)::Nothing
     since = execute(conn, "SELECT MIN(committedat) AS since FROM $(schema).commits WHERE branch = '$branch';") |>
         (obj -> only(getproperty.(obj, :since)))
     since = coalesce(since, GHOST.GH_FIRST_REPO_TS)
-    output = DataFrame(vcat(fill(String, 4), fill(Vector{Union{Missing,String}}, 3), fill(Int, 2)),
-                       [:branch, :id, :sha1, :committed_ts, :emails, :names, :users, :additions, :deletions],
-                       0)
+    output = DataFrame(
+        branch = String[],
+        id = String[],
+        sha1 = String[],
+        committed_ts = String[],
+        emails = Union{Missing, String, Vector{Union{Missing, String}}, Vector{String}, Vector{Missing}}[],
+        names = Union{Missing, String, Vector{Union{Missing, String}}, Vector{String}, Vector{Missing}}[],
+        users = Union{Missing, String, Vector{Union{Missing, String}}, Vector{String}, Vector{Missing}}[],
+        additions = Int[],
+        deletions = Int[]
+    )
     query = String(read(joinpath(pkgdir(GHOST), "src", "assets", "graphql", "04_commits_single.graphql"))) |>
         (obj -> replace(obj, r"\s+" => " ")) |>
         (obj -> replace(obj, r"\s+(\{|\}|\:)\s*" => s"\1")) |>
@@ -77,7 +85,7 @@ function query_commits(branch::AbstractString)::Nothing
         throw(ErrorException("$branch is not playing nice ($first)."))
     end
     for edge in json.edges
-        push!(output, GHOST.parse_commit(branch, edge.node))
+        push!(output, parse_commit(branch, edge.node))
     end
     execute(conn, "BEGIN;")
     load!(output,
@@ -114,11 +122,19 @@ function query_commits(branch::AbstractString)::Nothing
         catch err
             throw(ErrorException("$branch is not playing nice ($first)."))
         end
-        output = DataFrame(vcat(fill(String, 4), fill(Vector{Union{Missing,String}}, 3), fill(Int, 2)),
-                       [:branch, :id, :sha1, :committed_ts, :emails, :names, :users, :additions, :deletions],
-                       0)
+        output = DataFrame(
+            branch = String[],
+            id = String[],
+            sha1 = String[],
+            committed_ts = String[],
+            emails = Union{Missing, String, Vector{Union{Missing, String}}, Vector{String}, Vector{Missing}}[],
+            names = Union{Missing, String, Vector{Union{Missing, String}}, Vector{String}, Vector{Missing}}[],
+            users = Union{Missing, String, Vector{Union{Missing, String}}, Vector{String}, Vector{Missing}}[],
+            additions = Int[],
+            deletions = Int[]
+        )
         for edge in json.edges
-            push!(output, GHOST.parse_commit(branch, edge.node))
+            push!(output, parse_commit(branch, edge.node))
         end
         execute(conn, "BEGIN;")
         load!(output,
@@ -143,9 +159,17 @@ end
 """
 function query_commits(branches::AbstractVector{<:AbstractString}, batch_size::Integer)::Nothing
     (;conn, schema) = PARALLELENABLER
-    output = DataFrame(vcat(fill(String, 4), fill(Vector{Union{Missing,String}}, 3), fill(Int, 2)),
-                       [:branch, :id, :sha1, :committed_ts, :emails, :names, :users, :additions, :deletions],
-                       0)
+    output = DataFrame(
+        branch = String[],
+        id = String[],
+        sha1 = String[],
+        committed_ts = String[],
+        emails = Union{Missing, String, Vector{Union{Missing, String}}, Vector{String}, Vector{Missing}}[],
+        names = Union{Missing, String, Vector{Union{Missing, String}}, Vector{String}, Vector{Missing}}[],
+        users = Union{Missing, String, Vector{Union{Missing, String}}, Vector{String}, Vector{Missing}}[],
+        additions = Int[],
+        deletions = Int[]
+    )
     query = String(read(joinpath(pkgdir(GHOST), "src", "assets", "graphql", "03_commits.graphql"))) |>
         (obj -> replace(obj, r"\s+" => " ")) |>
         (obj -> replace(obj, r"\s+(\{|\}|\:)\s*" => s"\1")) |>

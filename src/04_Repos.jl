@@ -4,7 +4,7 @@
 Parses a node and returns a suitable `NamedTuple` for the table.
 """
 function parse_repo(node, spdx::AbstractString)
-    id, createdAt, nameWithOwner, description, primaryLanguage, defaultBranchRef = node
+    (;id, createdAt, nameWithOwner, description, primaryLanguage, defaultBranchRef) = node
     (id = id,
      spdx = spdx,
      slug = nameWithOwner,
@@ -21,7 +21,7 @@ end
 Takes a batch of 10 spdx/createdat and puts the data in the database.
 """
 function find_repos(batch::AbstractDataFrame)
-    (;conn, schema) = PARALLELENABLER
+    (;conn, schema) = GHOST.PARALLELENABLER
     output = DataFrame(id = String[], spdx = String[], slug = String[], createdat = DateTime[],
                        description = Union{Missing, String}[], primarylanguage = Union{Missing, String}[],
                        branch = Union{Missing, String}[], commits = Int[])

@@ -154,11 +154,11 @@ function setup(;host::AbstractString = get(ENV, "PGHOST", "localhost"),
                 dbname::AbstractString = get(ENV, "PGDATABASE", "postgres"),
                 user::AbstractString = get(ENV, "PGUSER", "postgres"),
                 password::AbstractString = get(ENV, "PGPASSWORD", "postgres"),
-                schema::AbstractString = "gh_2007_$(year(floor(now(utc_tz), Year) - Day(1)))",
+                schema::AbstractString = "ghost",
                 pats::Union{Nothing, Vector{GitHubPersonalAccessToken}} = nothing)
     GHOST.PARALLELENABLER.conn = Connection("host = $host port = $port dbname = $dbname user = $user password = $password")
     GHOST.PARALLELENABLER.schema = schema
-    schema = "gh_2007_$(year(floor(now(utc_tz), Year) - Day(1)))"
+    schema = "ghost"
     execute(GHOST.PARALLELENABLER.conn,
             replace(join(["CREATE EXTENSION IF NOT EXISTS btree_gist; CREATE SCHEMA IF NOT EXISTS schema;",
                           String(read(joinpath(@__DIR__, "assets", "sql", "pats.sql"))),

@@ -1,2 +1,2 @@
-ALTER TABLE schema.repos
+ALTER TABLE ghost.repos
 ADD UNIQUE (branch);

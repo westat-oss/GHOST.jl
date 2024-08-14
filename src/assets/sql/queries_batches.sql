@@ -2,7 +2,7 @@ WITH A AS (
     SELECT spdx,
         created,
         CEIL(count::real / 10) queries
-    FROM schema.queries
+    FROM ghost.queries
     WHERE NOT done
     ORDER BY queries DESC,
         spdx

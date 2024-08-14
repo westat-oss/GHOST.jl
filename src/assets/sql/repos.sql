@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS schema.repos (
+CREATE TABLE IF NOT EXISTS ghost.repos (
     id text PRIMARY KEY,
     spdx character varying(12) NOT NULL,
     slug text NOT NULL,
@@ -11,14 +11,15 @@ CREATE TABLE IF NOT EXISTS schema.repos (
     status text NOT NULL DEFAULT 'Init',
     CONSTRAINT repos_branch UNIQUE (branch)
 );
-COMMENT ON TABLE schema.repos IS 'Repository ID and base branch ID';
-COMMENT ON COLUMN schema.repos.id IS 'Repository ID';
-COMMENT ON COLUMN schema.repos.spdx IS 'SPDX license ID';
-COMMENT ON COLUMN schema.repos.slug IS 'Location of the respository';
-COMMENT ON COLUMN schema.repos.createdat IS 'When was the repository created on GitHub?';
-COMMENT ON COLUMN schema.repos.description IS 'Description of the respository';
-COMMENT ON COLUMN schema.repos.primarylanguage IS 'Primary language of the respository';
-COMMENT ON COLUMN schema.repos.branch IS 'Base branch ID';
-COMMENT ON COLUMN schema.repos.commits IS 'Number of commits in the branch until the end of the observation period';
-COMMENT ON COLUMN schema.repos.asof IS 'When was GitHub queried?';
-COMMENT ON COLUMN schema.repos.status IS 'Status of collection effort';
+ALTER TABLE ghost.repos OWNER TO postgres;
+COMMENT ON TABLE ghost.repos IS 'Repository ID and base branch ID';
+COMMENT ON COLUMN ghost.repos.id IS 'Repository ID';
+COMMENT ON COLUMN ghost.repos.spdx IS 'SPDX license ID';
+COMMENT ON COLUMN ghost.repos.slug IS 'Location of the respository';
+COMMENT ON COLUMN ghost.repos.createdat IS 'When was the repository created on GitHub?';
+COMMENT ON COLUMN ghost.repos.description IS 'Description of the respository';
+COMMENT ON COLUMN ghost.repos.primarylanguage IS 'Primary language of the respository';
+COMMENT ON COLUMN ghost.repos.branch IS 'Base branch ID';
+COMMENT ON COLUMN ghost.repos.commits IS 'Number of commits in the branch until the end of the observation period';
+COMMENT ON COLUMN ghost.repos.asof IS 'When was GitHub queried?';
+COMMENT ON COLUMN ghost.repos.status IS 'Status of collection effort';

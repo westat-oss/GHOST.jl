@@ -22,6 +22,7 @@ Takes a batch of 10 spdx/createdat and puts the data in the database.
 """
 function find_repos(batch::AbstractDataFrame)
     (;conn, schema) = GHOST.PARALLELENABLER
+    @info "In find_repos()"
     output = DataFrame(id = String[], spdx = String[], slug = String[], createdat = DateTime[],
                        description = Union{Missing, String}[], primarylanguage = Union{Missing, String}[],
                        branch = Union{Missing, String}[], commits = Int[])
@@ -37,9 +38,11 @@ function find_repos(batch::AbstractDataFrame)
         (obj -> replace(obj, r"\s+" => " ")) |>
         strip |>
         string;
-    vars = Dict("until" => "$(parse(Int, match(r"\d{4}$", schema).match) + 1)-01-01T00:00:00Z")
+    #vars = Dict("until" => "$(parse(Int, match(r"\d{4}$", schema).match) + 1)-01-01T00:00:00Z")
+    vars = Dict("until" => "2024-01-01T00:00:00Z")
     while true
         sleep(0.25)
+        @info "Running query in find_repos()."
         result = graphql(query, vars = vars)
         :Data ∈ propertynames(result) || return result
         json = JSON3.read(result.Data)

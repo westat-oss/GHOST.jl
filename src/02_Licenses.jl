@@ -9,6 +9,7 @@ It includes every OSI-approved license that is machine readable with Licensee.
 """
 function licenses()
     # Obtain all licences used by the Ruby gem: `licensee`.
+    @info "Running licenses query."
     licensee = graphql(string(strip(replace(String(read(joinpath(@__DIR__, "assets", "graphql", "01_licensee.graphql"))), r"[\n\s]+" => " "))),
                        # The repository is https://github.com/licensee/licensee
                        vars = Dict("id" => "MDEwOlJlcG9zaXRvcnkyMzAyMjM3Nw==",

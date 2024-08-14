@@ -35,6 +35,7 @@ end
 """
 function query_commits(branch::AbstractString)::Nothing
     (;conn, schema) = GHOST.PARALLELENABLER
+    @info "In query_commits()"
     since = execute(conn, "SELECT MIN(committedat) AS since FROM $(schema).commits WHERE branch = '$branch';") |>
         (obj -> only(getproperty.(obj, :since)))
     since = coalesce(since, GHOST.GH_FIRST_REPO_TS)
@@ -63,6 +64,7 @@ function query_commits(branch::AbstractString)::Nothing
     success = false
     json = try
         while !success
+            @info "Running query in query_commits({$branch})."
             result = graphql(query, vars = vars, max_retries = 1)
             json = JSON3.read(result.Data)
             if haskey(json, :errors)
@@ -75,6 +77,7 @@ function query_commits(branch::AbstractString)::Nothing
                 json = json.data.node.target.history
                 success = !isempty(json.edges)
             catch err
+                @error err
                 vars["first"] == 1 && throw(ErrorException("$branch is not playing nice."))
                 vars["first"] ÷= 2
                 sleep(0.25)
@@ -82,6 +85,7 @@ function query_commits(branch::AbstractString)::Nothing
         end
         json
     catch err
+        @error err
         throw(ErrorException("$branch is not playing nice ($first)."))
     end
     for edge in json.edges
@@ -101,10 +105,13 @@ function query_commits(branch::AbstractString)::Nothing
         success = false
         json = try
             while !success
+                @info "Running query in query_commits()."
                 result = graphql(query, vars = vars, max_retries = 1)
+                @info "Parsing JSON in query_commits()."
                 json = JSON3.read(result.Data)
                 if haskey(json, :errors)
                     if first(json.errors).type == "NOT_FOUND"
+                        @warn "Repository was not found."
                         execute(conn, "UPDATE $schema.repos SET status = 'NOT_FOUND' WHERE branch = '$branch';")
                         return
                     end
@@ -113,6 +120,7 @@ function query_commits(branch::AbstractString)::Nothing
                     json = json.data.node.target.history
                     success = !isempty(json.edges)
                 catch err
+                    @error err
                     vars["first"] == 1 && throw(ErrorException("$branch is not playing nice."))
                     vars["first"] ÷= 2
                     sleep(0.25)
@@ -159,6 +167,7 @@ end
 """
 function query_commits(branches::AbstractVector{<:AbstractString}, batch_size::Integer)::Nothing
     (;conn, schema) = PARALLELENABLER
+    @info "In query_commits()"
     output = DataFrame(
         branch = String[],
         id = String[],
@@ -179,6 +188,7 @@ function query_commits(branches::AbstractVector{<:AbstractString}, batch_size::I
     vars = Dict("until" => "$(floor(now(), Year))Z",
                 "nodes" => branches,
                 "first" => batch_size)
+    @info "Running query in query_commits({$join(branches, ",")})."
     result = graphql(query, vars = vars)
     json = try
         json = JSON3.read(result.Data)

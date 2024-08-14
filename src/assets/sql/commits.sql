@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS schema.commits (
+CREATE TABLE IF NOT EXISTS ghost.commits (
     branch text NOT NULL,
     id text NOT NULL,
     oid text NOT NULL,
@@ -13,16 +13,17 @@ CREATE TABLE IF NOT EXISTS schema.commits (
         timezone('UTC'::text, CURRENT_TIMESTAMP)
     ),
     CONSTRAINT commits_pkey PRIMARY KEY (id),
-    CONSTRAINT branch FOREIGN KEY (branch) REFERENCES schema.repos (branch)
+    CONSTRAINT branch FOREIGN KEY (branch) REFERENCES ghost.repos (branch)
 );
-COMMENT ON TABLE schema.commits IS 'Commits Information';
-COMMENT ON COLUMN schema.commits.branch IS 'Base Branch ID (foreign key)';
-COMMENT ON COLUMN schema.commits.id IS 'Commit ID';
-COMMENT ON COLUMN schema.commits.oid IS 'Git Object ID (SHA1)';
-COMMENT ON COLUMN schema.commits.committedat IS 'When was it committed?';
-COMMENT ON COLUMN schema.commits.authors_email IS 'The email in the Git commit.';
-COMMENT ON COLUMN schema.commits.authors_name IS 'The name in the Git commit.';
-COMMENT ON COLUMN schema.commits.authors_id IS 'GitHub Author';
-COMMENT ON COLUMN schema.commits.additions IS 'The number of additions in this commit.';
-COMMENT ON COLUMN schema.commits.deletions IS 'The number of deletions in this commit.';
-COMMENT ON COLUMN schema.commits.asof IS 'When was GitHub queried.';
+ALTER TABLE ghost.commits OWNER TO postgres;
+COMMENT ON TABLE ghost.commits IS 'Commits Information';
+COMMENT ON COLUMN ghost.commits.branch IS 'Base Branch ID (foreign key)';
+COMMENT ON COLUMN ghost.commits.id IS 'Commit ID';
+COMMENT ON COLUMN ghost.commits.oid IS 'Git Object ID (SHA1)';
+COMMENT ON COLUMN ghost.commits.committedat IS 'When was it committed?';
+COMMENT ON COLUMN ghost.commits.authors_email IS 'The email in the Git commit.';
+COMMENT ON COLUMN ghost.commits.authors_name IS 'The name in the Git commit.';
+COMMENT ON COLUMN ghost.commits.authors_id IS 'GitHub Author';
+COMMENT ON COLUMN ghost.commits.additions IS 'The number of additions in this commit.';
+COMMENT ON COLUMN ghost.commits.deletions IS 'The number of deletions in this commit.';
+COMMENT ON COLUMN ghost.commits.asof IS 'When was GitHub queried.';

@@ -14,6 +14,7 @@ function query_intervals(created::Vector{Interval{DateTime,Closed,Open}})
         (obj -> replace(obj, r"\s+" => " ")) |>
         strip |>
         string;
+    @info "Running query in query_intervals()."
     result = graphql(query)
     json = JSON3.read(result.Data)
     data = json.data
@@ -25,6 +26,7 @@ end
 Returns a 
 """
 function query_intervals(created::Vector{Vector{Interval{DateTime,Closed,Open}}})
+    @info "In query_intervals()"
     output = DataFrame()
     graphqlremaining =
         ( fetch(@spawnat(
@@ -37,12 +39,14 @@ function query_intervals(created::Vector{Vector{Interval{DateTime,Closed,Open}}}
         DataFrame
     maptovalidprocs = sort!(graphqlremaining, [order(2, rev = true), order(3)])[!,1][1:min(length(READY.x), length(created))] .- 1
     for w in maptovalidprocs
+        @info "Spawning thread for {$w}"
         READY.x[w] = remotecall(GHOST.query_intervals, w + 1, popfirst!(created))
     end
     while !isempty(created)
         # local w
         w = findfirst(isready, @view(READY.x[maptovalidprocs]))
         if isnothing(w)
+            @info "Sleeping in while"
             sleep(3)
         else
             append!(output, fetch(READY.x[maptovalidprocs][w]))
@@ -121,7 +125,8 @@ function queries(spdx::AbstractString)
     # schema = "gh_2007_$(Dates.year(floor(now(), Year) - Day(1)))"
     (;conn, schema) = PARALLELENABLER
     @everywhere GHOST.PARALLELENABLER.spdx = $spdx
-    calendaryear = parse(Int, schema[end - 3:end])
+    #calendaryear = parse(Int, schema[end - 3:end])
+    calendaryear = 2023
     created = vcat(floor(GH_FIRST_REPO_TS, Day),
                    DateTime("2009-01-01"):Month(6):DateTime("2010-01-01"),
                    DateTime("2010-01-01"):Month(3):DateTime("2011-01-01"),
@@ -149,7 +154,7 @@ function queries(spdx::AbstractString)
     # Dates.canonicalize(Dates.CompoundPeriod(minimum(elem.last - elem.first for elem in data.created)))
     data[!,:created] .= format_tsrange.(data.created)
     data[!,:spdx] .= spdx
-    sort!(data, :created)
+    sort!(data, order(:created))
     execute(conn, "BEGIN;")
     statement = string(
         "INSERT INTO ",
@@ -170,6 +175,7 @@ end
     find_repo_count_for_intervals(spdx::AbstractString, created::AbstractVector{<:Interval{DateTime}})
 """
 function find_repo_count_for_intervals(spdx::AbstractString, created::AbstractVector{<:Interval{DateTime}})
+    @info "Finding repo count for {$spdx} for {$created}."
     repositoryCount = zeros(UInt32, length(created))
     indices = range(firstindex(created), lastindex(created), step = 286)
     for idx₀ in indices
@@ -186,6 +192,7 @@ function find_repo_count_for_intervals(spdx::AbstractString, created::AbstractVe
             string;
         try
             sleep(0.75)
+            @info "Running query in find_repo_count_for_intervals()."
             result = graphql(query)
             json = JSON3.read(result.Data)
             repositoryCount[vals] .= getproperty.(values(json.data), :repositoryCount)

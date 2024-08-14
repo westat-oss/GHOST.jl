@@ -23,11 +23,12 @@ pats = [ GitHubPersonalAccessToken(split(pat, ':')...) for pat in filter!(!isemp
     low = minimum(sum(subdf.queries) for subdf in data)
     data = data[findfirst(subdf -> sum(subdf.queries) == low, data)]
     find_repos(data)
+    sql = String(read(joinpath(pkgdir(GHOST), "src", "assets", "sql", "branches_min_max.sql"))) |>
+        (obj -> replace(obj, "schema" => GHOST.PARALLELENABLER.schema)) |>
+        (obj -> replace(obj, "min_lim" => 1)) |>
+        (obj -> replace(obj, "max_lim" => 2))
     data = execute(GHOST.PARALLELENABLER.conn,
-                   String(read(joinpath(pkgdir(GHOST), "src", "assets", "sql", "branches_min_max.sql"))) |>
-                       (obj -> replace(obj, "schema" => GHOST.PARALLELENABLER.schema)) |>
-                       (obj -> replace(obj, "min_lim" => 1)) |>
-                       (obj -> replace(obj, "max_lim" => 2)),
+                   sql,
                    not_null = true) |>
         (obj -> getproperty.(obj, :branch))
     query_commits(data, 3)

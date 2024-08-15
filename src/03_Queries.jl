@@ -113,6 +113,9 @@ format_tsrange(obj::Interval{DateTime}) = replace(string(obj), " .." => ",")
             spdx::AbstractString,
             schema::AbstractString = "gh_2007_\$(Dates.year(floor(now(), Year) - Day(1)))")
 
+Creates records for time intervals such that they contain at most 1000 repos created in them.
+Used to help meter and track the work of getting data from GitHub.
+
 This will upload the queries to the database with:
 - spdx::text NOT NULL
 - created::tsrange NOT NULL

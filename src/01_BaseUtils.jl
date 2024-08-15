@@ -155,20 +155,23 @@ function setup(;host::AbstractString = get(ENV, "PGHOST", "localhost"),
                 user::AbstractString = get(ENV, "PGUSER", "postgres"),
                 password::AbstractString = get(ENV, "PGPASSWORD", "postgres"),
                 schema::AbstractString = "ghost",
-                pats::Union{Nothing, Vector{GitHubPersonalAccessToken}} = nothing)
+                pats::Union{Nothing, Vector{GitHubPersonalAccessToken}} = nothing,
+                init_schema::Bool = false)
     GHOST.PARALLELENABLER.conn = Connection("host = $host port = $port dbname = $dbname user = $user password = $password")
     GHOST.PARALLELENABLER.schema = schema
     schema = "ghost"
-    execute(GHOST.PARALLELENABLER.conn,
-            replace(join(["CREATE EXTENSION IF NOT EXISTS btree_gist; CREATE SCHEMA IF NOT EXISTS schema;",
-                          String(read(joinpath(@__DIR__, "assets", "sql", "pats.sql"))),
-                          String(read(joinpath(@__DIR__, "assets", "sql", "licenses.sql"))),
-                          String(read(joinpath(@__DIR__, "assets", "sql", "queries.sql"))),
-                          String(read(joinpath(@__DIR__, "assets", "sql", "repos.sql"))),
-                          String(read(joinpath(@__DIR__, "assets", "sql", "commits.sql"))),
-                         ],
-                        ' '),
-                    "schema" => schema))
+    if init_schema
+        execute(GHOST.PARALLELENABLER.conn,
+                replace(join(["CREATE EXTENSION IF NOT EXISTS btree_gist; CREATE SCHEMA IF NOT EXISTS schema;",
+                            String(read(joinpath(@__DIR__, "assets", "sql", "pats.sql"))),
+                            String(read(joinpath(@__DIR__, "assets", "sql", "licenses.sql"))),
+                            String(read(joinpath(@__DIR__, "assets", "sql", "queries.sql"))),
+                            String(read(joinpath(@__DIR__, "assets", "sql", "repos.sql"))),
+                            String(read(joinpath(@__DIR__, "assets", "sql", "commits.sql"))),
+                            ],
+                            ' '),
+                        "schema" => schema))
+    end
     if isnothing(pats)
         try
             pat = DataFrame(execute(GHOST.PARALLELENABLER.conn, "SELECT login, token FROM $schema.pats ORDER BY login LIMIT 1;"))

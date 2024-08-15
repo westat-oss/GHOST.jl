@@ -230,6 +230,24 @@ function query_commits(branches::AbstractVector{<:AbstractString}, batch_size::I
         println(branches)
         throw(err)
     end
+
+    output_users = DataFrame(
+        users = collect(Iterators.flatten(output.users)), 
+        names = collect(Iterators.flatten(output.names)),
+        emails = collect(Iterators.flatten(output.emails)))
+    try
+        execute(conn, "BEGIN;")
+        load!(output_users,
+              conn,
+              string("INSERT INTO $(schema).users VALUES (",
+                     join(("\$$i" for i in 1:size(output_users, 2)), ','),
+                     ") ON CONFLICT ON CONSTRAINT users_pkey DO NOTHING;"))
+        execute(conn, "COMMIT;")
+    catch err
+        println(branches)
+        throw(err)
+    end
+
     execute(conn,
             """
             UPDATE $(schema).repos

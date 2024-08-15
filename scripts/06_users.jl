@@ -4,17 +4,19 @@ setup()
 
 users = execute(conn,
                 """
-                SELECT author
-                FROM $schema.usr_to_get_login_full A
+                SELECT author_id
+                FROM $schema.users A
                 LEFT JOIN $schema.test_usr B
-                ON A.author = B.id
+                ON A.author_id = B.id
                 WHERE B.id is null
                 ;
                 """) |>
-    (obj -> getproperty.(obj, :author))
-users = [ data[i:min(i + 4_999, lastindex(users))] for i in 1:5_000:length(users) ]
+    (obj -> getproperty.(obj, :author_id))
 
-function query_users(users::AbstractVector{<:AbstractString})
+# Creates a vector of user id vectors, where the inner vector is at most 5_000 elements in size.
+grouped_users = [users[i:min(i + 4_999, lastindex(users))] for i in 1:5_000:length(users) ]
+
+function query_users(users::Vector{<:String})
     nodes = [ users[i:min(i + 99, lastindex(users))] for i in 1:100:length(users) ]
     vars = Dict(zip(string.("x", eachindex(nodes)), nodes))
     query = string("fragment a on Node {id __typename",
@@ -35,8 +37,8 @@ function query_users(users::AbstractVector{<:AbstractString})
     nothing
 end
 
-for i in 1:lastindex(users)
+for i in 1:lastindex(grouped_users)
     println(i)
-    query_users(users[i])
+    query_users(grouped_users[i])
     sleep(0.25)
 end

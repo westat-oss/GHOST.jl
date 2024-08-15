@@ -162,12 +162,8 @@ function setup(;host::AbstractString = get(ENV, "PGHOST", "localhost"),
     schema = "ghost"
     if init_schema
         execute(GHOST.PARALLELENABLER.conn,
-                replace(join(["CREATE EXTENSION IF NOT EXISTS btree_gist; CREATE SCHEMA IF NOT EXISTS schema;",
-                            String(read(joinpath(@__DIR__, "assets", "sql", "pats.sql"))),
-                            String(read(joinpath(@__DIR__, "assets", "sql", "licenses.sql"))),
-                            String(read(joinpath(@__DIR__, "assets", "sql", "queries.sql"))),
-                            String(read(joinpath(@__DIR__, "assets", "sql", "repos.sql"))),
-                            String(read(joinpath(@__DIR__, "assets", "sql", "commits.sql"))),
+                replace(join([
+                            String(read(joinpath(@__DIR__, "assets", "sql", "ddl", "db_definition.sql")))
                             ],
                             ' '),
                         "schema" => schema))

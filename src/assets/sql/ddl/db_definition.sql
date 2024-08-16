@@ -164,8 +164,8 @@ SET default_table_access_method = heap;
 --
 
 CREATE TABLE ghost.licenses (
-    spdx character varying(20) NOT NULL,
-    name character varying(90) NOT NULL
+    spdx text NOT NULL,
+    name text NOT NULL
 );
 
 
@@ -267,7 +267,7 @@ COMMENT ON COLUMN ghost.queries.done IS 'Has the repositories been collected?';
 
 CREATE TABLE ghost.repos (
     id text NOT NULL,
-    spdx character varying(12) NOT NULL,
+    spdx text NOT NULL,
     slug text NOT NULL,
     createdat timestamp without time zone NOT NULL,
     description text,
@@ -3351,7 +3351,7 @@ ALTER TABLE ghost_partitions.commits_2024_12 OWNER TO postgres;
 
 CREATE TABLE ghost_partitions.repos_2007 (
     id text NOT NULL,
-    spdx character varying(12) NOT NULL,
+    spdx text NOT NULL,
     slug text NOT NULL,
     createdat timestamp without time zone NOT NULL,
     description text,
@@ -3371,7 +3371,7 @@ ALTER TABLE ghost_partitions.repos_2007 OWNER TO postgres;
 
 CREATE TABLE ghost_partitions.repos_2008 (
     id text NOT NULL,
-    spdx character varying(12) NOT NULL,
+    spdx text NOT NULL,
     slug text NOT NULL,
     createdat timestamp without time zone NOT NULL,
     description text,
@@ -3391,7 +3391,7 @@ ALTER TABLE ghost_partitions.repos_2008 OWNER TO postgres;
 
 CREATE TABLE ghost_partitions.repos_2009 (
     id text NOT NULL,
-    spdx character varying(12) NOT NULL,
+    spdx text NOT NULL,
     slug text NOT NULL,
     createdat timestamp without time zone NOT NULL,
     description text,
@@ -3411,7 +3411,7 @@ ALTER TABLE ghost_partitions.repos_2009 OWNER TO postgres;
 
 CREATE TABLE ghost_partitions.repos_2010 (
     id text NOT NULL,
-    spdx character varying(12) NOT NULL,
+    spdx text NOT NULL,
     slug text NOT NULL,
     createdat timestamp without time zone NOT NULL,
     description text,
@@ -3431,7 +3431,7 @@ ALTER TABLE ghost_partitions.repos_2010 OWNER TO postgres;
 
 CREATE TABLE ghost_partitions.repos_2011 (
     id text NOT NULL,
-    spdx character varying(12) NOT NULL,
+    spdx text NOT NULL,
     slug text NOT NULL,
     createdat timestamp without time zone NOT NULL,
     description text,
@@ -3451,7 +3451,7 @@ ALTER TABLE ghost_partitions.repos_2011 OWNER TO postgres;
 
 CREATE TABLE ghost_partitions.repos_2012 (
     id text NOT NULL,
-    spdx character varying(12) NOT NULL,
+    spdx text NOT NULL,
     slug text NOT NULL,
     createdat timestamp without time zone NOT NULL,
     description text,
@@ -3471,7 +3471,7 @@ ALTER TABLE ghost_partitions.repos_2012 OWNER TO postgres;
 
 CREATE TABLE ghost_partitions.repos_2013 (
     id text NOT NULL,
-    spdx character varying(12) NOT NULL,
+    spdx text NOT NULL,
     slug text NOT NULL,
     createdat timestamp without time zone NOT NULL,
     description text,
@@ -3491,7 +3491,7 @@ ALTER TABLE ghost_partitions.repos_2013 OWNER TO postgres;
 
 CREATE TABLE ghost_partitions.repos_2014 (
     id text NOT NULL,
-    spdx character varying(12) NOT NULL,
+    spdx text NOT NULL,
     slug text NOT NULL,
     createdat timestamp without time zone NOT NULL,
     description text,
@@ -3511,7 +3511,7 @@ ALTER TABLE ghost_partitions.repos_2014 OWNER TO postgres;
 
 CREATE TABLE ghost_partitions.repos_2015 (
     id text NOT NULL,
-    spdx character varying(12) NOT NULL,
+    spdx text NOT NULL,
     slug text NOT NULL,
     createdat timestamp without time zone NOT NULL,
     description text,
@@ -3531,7 +3531,7 @@ ALTER TABLE ghost_partitions.repos_2015 OWNER TO postgres;
 
 CREATE TABLE ghost_partitions.repos_2016 (
     id text NOT NULL,
-    spdx character varying(12) NOT NULL,
+    spdx text NOT NULL,
     slug text NOT NULL,
     createdat timestamp without time zone NOT NULL,
     description text,
@@ -3551,7 +3551,7 @@ ALTER TABLE ghost_partitions.repos_2016 OWNER TO postgres;
 
 CREATE TABLE ghost_partitions.repos_2017 (
     id text NOT NULL,
-    spdx character varying(12) NOT NULL,
+    spdx text NOT NULL,
     slug text NOT NULL,
     createdat timestamp without time zone NOT NULL,
     description text,
@@ -3571,7 +3571,7 @@ ALTER TABLE ghost_partitions.repos_2017 OWNER TO postgres;
 
 CREATE TABLE ghost_partitions.repos_2018 (
     id text NOT NULL,
-    spdx character varying(12) NOT NULL,
+    spdx text NOT NULL,
     slug text NOT NULL,
     createdat timestamp without time zone NOT NULL,
     description text,
@@ -3591,7 +3591,7 @@ ALTER TABLE ghost_partitions.repos_2018 OWNER TO postgres;
 
 CREATE TABLE ghost_partitions.repos_2019 (
     id text NOT NULL,
-    spdx character varying(12) NOT NULL,
+    spdx text NOT NULL,
     slug text NOT NULL,
     createdat timestamp without time zone NOT NULL,
     description text,
@@ -3611,7 +3611,7 @@ ALTER TABLE ghost_partitions.repos_2019 OWNER TO postgres;
 
 CREATE TABLE ghost_partitions.repos_2020 (
     id text NOT NULL,
-    spdx character varying(12) NOT NULL,
+    spdx text NOT NULL,
     slug text NOT NULL,
     createdat timestamp without time zone NOT NULL,
     description text,
@@ -3631,7 +3631,7 @@ ALTER TABLE ghost_partitions.repos_2020 OWNER TO postgres;
 
 CREATE TABLE ghost_partitions.repos_2021 (
     id text NOT NULL,
-    spdx character varying(12) NOT NULL,
+    spdx text NOT NULL,
     slug text NOT NULL,
     createdat timestamp without time zone NOT NULL,
     description text,
@@ -3651,7 +3651,7 @@ ALTER TABLE ghost_partitions.repos_2021 OWNER TO postgres;
 
 CREATE TABLE ghost_partitions.repos_2022 (
     id text NOT NULL,
-    spdx character varying(12) NOT NULL,
+    spdx text NOT NULL,
     slug text NOT NULL,
     createdat timestamp without time zone NOT NULL,
     description text,
@@ -3671,7 +3671,7 @@ ALTER TABLE ghost_partitions.repos_2022 OWNER TO postgres;
 
 CREATE TABLE ghost_partitions.repos_2023 (
     id text NOT NULL,
-    spdx character varying(12) NOT NULL,
+    spdx text NOT NULL,
     slug text NOT NULL,
     createdat timestamp without time zone NOT NULL,
     description text,
@@ -3691,7 +3691,7 @@ ALTER TABLE ghost_partitions.repos_2023 OWNER TO postgres;
 
 CREATE TABLE ghost_partitions.repos_2024 (
     id text NOT NULL,
-    spdx character varying(12) NOT NULL,
+    spdx text NOT NULL,
     slug text NOT NULL,
     createdat timestamp without time zone NOT NULL,
     description text,

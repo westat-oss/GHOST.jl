@@ -26,3 +26,6 @@ Manifest.toml
 .vscode/settings.json
 debug.sh
 ghost_base_data.sql
+*.pem
+*.zip
+*.pub

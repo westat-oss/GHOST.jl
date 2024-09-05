@@ -14,6 +14,26 @@ function parse_repo(node, spdx::AbstractString)
      branch = isnothing(defaultBranchRef) ? missing : defaultBranchRef.id,
      commits = isnothing(defaultBranchRef) ? 0 : defaultBranchRef.target.history.totalCount,
     )
+    #= Additional repo attribute candidates:
+        - archivedAt
+        - forkCount
+        - forkingAllowed
+        - hasIssuesEnabled
+        - hasDiscussionsEnabled
+        - hasSponsorshipEnabled
+        - hasWikiEnabled
+        - homePageUrl
+        - isArchived
+        - isMirror
+        - label
+        - labels text[]
+        - latestRelease
+        - licenseInfo
+        - name
+        - owner
+        - pushedAt
+    =#
+
 end
 """
     find_repos(batch::AbstractDataFrame)::Nothing

@@ -15,6 +15,7 @@ function parse_repo(node, spdx::AbstractString)
      commits = isnothing(defaultBranchRef) ? 0 : defaultBranchRef.target.history.totalCount,
     )
     #= Additional repo attribute candidates:
+        source: https://docs.github.com/en/graphql/reference/objects#repository
         - archivedAt
         - forkCount
         - forkingAllowed

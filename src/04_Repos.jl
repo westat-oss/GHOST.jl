@@ -4,7 +4,9 @@
 Parses a node and returns a suitable `NamedTuple` for the table.
 """
 function parse_repo(node, spdx::AbstractString)
-    (;id, createdAt, nameWithOwner, description, primaryLanguage, defaultBranchRef) = node
+    (;id, createdAt, nameWithOwner, description, primaryLanguage, defaultBranchRef, 
+      repositoryTopics, forkCount, isInOrganization, homepageUrl, dependencyGraphManifests,
+      stargazerCount,  watchers, releases, issues) = node
     (id = id,
      spdx = spdx,
      slug = nameWithOwner,
@@ -12,6 +14,20 @@ function parse_repo(node, spdx::AbstractString)
      description = something(description, missing),
      primarylanguage = isnothing(primaryLanguage) ? missing : primaryLanguage.name,
      branch = isnothing(defaultBranchRef) ? missing : defaultBranchRef.id,
+     topics = escape_string.(
+            getproperty.(getproperty.(getproperty.(repositoryTopics.edges, :node), :topic), :name)),
+     forks = forkCount,
+     isinorganization = isInOrganization,
+     homepageurl = homepageUrl,
+     dependencies = getproperty.(
+            filter(x -> !isnothing(x), getproperty.(getproperty.(
+                vcat(getproperty.(getproperty.(getproperty.(dependencyGraphManifests.edges, :node), :dependencies), :edges)...), 
+                :node), :repository)), 
+            :nameWithOwner),
+     stargazers = stargazerCount, 
+     watchers = isnothing(watchers) ? 0 : watchers.totalCount,
+     releases = isnothing(releases) ? 0 : releases.totalCount,
+     issues = isnothing(issues) ? 0 : issues.totalCount,
      commits = isnothing(defaultBranchRef) ? 0 : defaultBranchRef.target.history.totalCount,
     )
     #= Additional repo attribute candidates:

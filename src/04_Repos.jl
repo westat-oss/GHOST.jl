@@ -4,7 +4,9 @@
 Parses a node and returns a suitable `NamedTuple` for the table.
 """
 function parse_repo(node, spdx::AbstractString)
-    (;id, createdAt, nameWithOwner, description, primaryLanguage, defaultBranchRef) = node
+    (;id, createdAt, nameWithOwner, description, primaryLanguage, defaultBranchRef, 
+      repositoryTopics, forkCount, isInOrganization, homepageUrl, dependencyGraphManifests,
+      stargazerCount,  watchers, releases, issues) = node
     (id = id,
      spdx = spdx,
      slug = nameWithOwner,
@@ -12,8 +14,43 @@ function parse_repo(node, spdx::AbstractString)
      description = something(description, missing),
      primarylanguage = isnothing(primaryLanguage) ? missing : primaryLanguage.name,
      branch = isnothing(defaultBranchRef) ? missing : defaultBranchRef.id,
+     topics = escape_string.(
+            getproperty.(getproperty.(getproperty.(repositoryTopics.edges, :node), :topic), :name)),
+     forks = forkCount,
+     isinorganization = isInOrganization,
+     homepageurl = isnothing(homepageUrl) ? missing : homepageUrl,
+     dependencies = getproperty.(
+            filter(x -> !isnothing(x), getproperty.(getproperty.(
+                vcat(getproperty.(getproperty.(getproperty.(dependencyGraphManifests.edges, :node), :dependencies), :edges)...), 
+                :node), :repository)), 
+            :nameWithOwner),
+     stargazers = isnothing(stargazerCount) ? missing : stargazerCount,
+     watchers = isnothing(watchers) ? 0 : watchers.totalCount,
+     releases = isnothing(releases) ? 0 : releases.totalCount,
+     issues = isnothing(issues) ? 0 : issues.totalCount,
      commits = isnothing(defaultBranchRef) ? 0 : defaultBranchRef.target.history.totalCount,
     )
+    #= Additional repo attribute candidates:
+        source: https://docs.github.com/en/graphql/reference/objects#repository
+        - archivedAt
+        - forkCount
+        - forkingAllowed
+        - hasIssuesEnabled
+        - hasDiscussionsEnabled
+        - hasSponsorshipEnabled
+        - hasWikiEnabled
+        - homePageUrl
+        - isArchived
+        - isMirror
+        - label
+        - labels text[]
+        - latestRelease
+        - licenseInfo
+        - name
+        - owner
+        - pushedAt
+    =#
+
 end
 """
     find_repos(batch::AbstractDataFrame)::Nothing
@@ -25,7 +62,17 @@ function find_repos(batch::AbstractDataFrame)
     @info "In find_repos()"
     output = DataFrame(id = String[], spdx = String[], slug = String[], createdat = DateTime[],
                        description = Union{Missing, String}[], primarylanguage = Union{Missing, String}[],
-                       branch = Union{Missing, String}[], commits = Int[])
+                       branch = Union{Missing, String}[], 
+                       topics = Union{Missing, Vector{String}}[],
+                        forks = Union{Missing, Int64}[],
+                        isinorganization = Union{Missing, Bool}[],
+                        homepageurl = Union{Missing, String}[],
+                        dependencies = Union{Missing, Vector{String}}[],
+                        stargazers = Union{Missing, Int64}[],
+                        watchers = Union{Missing, Int64}[],
+                        releases = Union{Missing, Int64}[],
+                        issues = Union{Missing, Int64}[],                       
+                       commits = Union{Missing, Int64}[])
     subsquery = join([ string("_$idx:search(query:\"is:public fork:false mirror:false archived:false license:$(batch.spdx[idx]) created:",
                      format(batch.created[idx].first, "yyyy-mm-ddTHH:MM:SS\\Z"),
                      "..",

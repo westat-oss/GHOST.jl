@@ -57,7 +57,7 @@ function query_commits(branch::AbstractString)::Nothing
         strip |>
         string
     vars = Dict("since" => string(since, "Z"),
-                "until" => "2020-01-01T00:00:00Z",
+                "until" => "2025-01-01T00:00:00Z",
                 "node" => branch,
                 "first" => 32,
                 )

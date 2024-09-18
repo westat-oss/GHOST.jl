@@ -20,9 +20,9 @@ function query_users(users::Vector{<:String})
     nodes = [ users[i:min(i + 99, lastindex(users))] for i in 1:100:length(users) ]
     vars = Dict(zip(string.("x", eachindex(nodes)), nodes))
     query = string("fragment a on Node {id __typename",
-                   "...on User{login} ",
-                   "...on Organization {login} ",
-                   "...on Bot {login}}",
+                   "...on User {login, createdAt, location} ",
+                   "...on Organization {login, createdAt, location} ",
+                   "...on Bot {login, createdAt, resourcePath}}",
                    "query A(",
                    join(("\$x$i:[ID!]!" for i in eachindex(nodes)), ','),
                    "){",
@@ -32,7 +32,7 @@ function query_users(users::Vector{<:String})
     json = JSON3.read(result.Data)
     output = reduce(vcat, DataFrame(r for r in values(elem) if ~isnothing(r)) for elem in values(json.data))
     execute(conn, "BEGIN;")
-    GHOST.load!(output, conn, "INSERT INTO $schema.test_usr VALUES(\$1,\$2,\$3) ON CONFLICT DO NOTHING;")
+    GHOST.load!(output, conn, "INSERT INTO $schema.test_usr VALUES(\$1,\$2,\$3,\$4) ON CONFLICT DO NOTHING;")
     execute(conn, "COMMIT;")
     nothing
 end

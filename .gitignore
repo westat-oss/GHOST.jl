@@ -27,3 +27,6 @@ Manifest.toml
 debug.sh
 ghost_base_data.sql
 *.log
+*.pem
+*.zip
+*.pub

@@ -6,22 +6,67 @@ fragment A on SearchResultItemConnection {
   edges {
     node {
       ... on Repository {
-        id
-        createdAt
-        nameWithOwner
-        description
+        id 
+        createdAt 
+        nameWithOwner 
+        description 
         primaryLanguage {
           name
         }
-        defaultBranchRef {
+        languages(first:10) { 
+            nodes {
+            name
+          }                 
+        }
+        defaultBranchRef { 
           id
-          target {
+          target { 
             ... on Commit {
               history(until: $until) {
                 totalCount
+              } 
+            } 
+          } 
+        }
+        repositoryTopics(first:50) {
+          edges {
+            node {
+              topic {
+                name
               }
             }
           }
+        }
+        forkCount
+        isInOrganization
+        stargazerCount
+        homepageUrl
+        dependencyGraphManifests(first: 50)
+        {
+          totalCount
+          edges {
+            node {
+              dependencies {
+                edges {
+                  node {
+                    packageName
+                      repository {
+                        nameWithOwner
+                      }
+                    }
+                }
+              }
+            }
+          }
+        }
+        watchers {
+          totalCount
+        }
+        releases {
+          totalCount
+        }
+        issues {
+          totalCount
         }
       }
     }

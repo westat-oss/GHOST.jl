@@ -14,9 +14,9 @@ function parse_repo(node, spdx::AbstractString)
      description = something(description, missing),
      primarylanguage = isnothing(primaryLanguage) ? missing : primaryLanguage.name,
      branch = isnothing(defaultBranchRef) ? missing : defaultBranchRef.id,
-     topics = escape_string.(
+     topics = isnothing(repositoryTopics) ? missing : escape_string.(
             getproperty.(getproperty.(getproperty.(repositoryTopics.edges, :node), :topic), :name)),
-     forks = forkCount,
+     forks = isnothing(forkCount) ? missing : forkCount,
      isinorganization = isInOrganization,
      homepageurl = isnothing(homepageUrl) ? missing : homepageUrl,
      dependencies = getproperty.(

@@ -1,7 +1,7 @@
 using GHOST
 time_start = now()
 setup()
-setup_parallel(5)
+setup_parallel()
 spdxs = execute(GHOST.PARALLELENABLER.conn,
                 "SELECT spdx FROM $(GHOST.PARALLELENABLER.schema).licenses ORDER BY spdx;",
                 not_null = true) |>

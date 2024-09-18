@@ -93,10 +93,11 @@ function find_repos(batch::AbstractDataFrame)
         result = graphql(query, vars = vars)
         :Data ∈ propertynames(result) || return result
         json = JSON3.read(result.Data)
-        append!(output,
-                reduce(vcat,
-                       DataFrame(parse_repo(node.node, spdx) for node in elem.edges)
-                       for (elem, spdx) in zip(values(json.data), batch[!,:spdx])))
+        new_data = reduce(vcat,
+            DataFrame(parse_repo(node.node, spdx) for node in elem.edges)
+            for (elem, spdx) in zip(values(json.data), batch[!,:spdx]))
+        @info new_data
+        append!(output, new_data)
         any(elem -> elem.pageInfo.hasNextPage, values(json.data)) || break
         for idx in eachindex(json.data)
             if !isnothing(json.data[idx].pageInfo.endCursor)

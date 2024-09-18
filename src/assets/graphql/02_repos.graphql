@@ -28,7 +28,7 @@ fragment A on SearchResultItemConnection {
             } 
           } 
         }
-        repositoryTopics(first:50) {
+        repositoryTopics(first:10) {
           edges {
             node {
               topic {
@@ -41,24 +41,6 @@ fragment A on SearchResultItemConnection {
         isInOrganization
         stargazerCount
         homepageUrl
-        dependencyGraphManifests(first: 50)
-        {
-          totalCount
-          edges {
-            node {
-              dependencies {
-                edges {
-                  node {
-                    packageName
-                      repository {
-                        nameWithOwner
-                      }
-                    }
-                }
-              }
-            }
-          }
-        }
         watchers {
           totalCount
         }

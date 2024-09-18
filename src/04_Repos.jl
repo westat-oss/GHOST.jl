@@ -5,7 +5,7 @@ Parses a node and returns a suitable `NamedTuple` for the table.
 """
 function parse_repo(node, spdx::AbstractString)
     (;id, createdAt, nameWithOwner, description, primaryLanguage, defaultBranchRef, 
-      repositoryTopics, forkCount, isInOrganization, homepageUrl, dependencyGraphManifests,
+      repositoryTopics, forkCount, isInOrganization, homepageUrl,
       stargazerCount,  watchers, releases, issues) = node
     (id = id,
      spdx = spdx,
@@ -19,11 +19,7 @@ function parse_repo(node, spdx::AbstractString)
      forks = isnothing(forkCount) ? missing : forkCount,
      isinorganization = isInOrganization,
      homepageurl = isnothing(homepageUrl) ? missing : homepageUrl,
-     dependencies = getproperty.(
-            filter(x -> !isnothing(x), getproperty.(getproperty.(
-                vcat(getproperty.(getproperty.(getproperty.(dependencyGraphManifests.edges, :node), :dependencies), :edges)...), 
-                :node), :repository)), 
-            :nameWithOwner),
+     dependencies = missing,
      stargazers = isnothing(stargazerCount) ? missing : stargazerCount,
      watchers = isnothing(watchers) ? 0 : watchers.totalCount,
      releases = isnothing(releases) ? 0 : releases.totalCount,

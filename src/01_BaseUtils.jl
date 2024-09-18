@@ -103,6 +103,7 @@ function graphql(
     result = try
         obj.client.Query(query, operationName = operationName, vars = vars)
     catch err
+        @error obj
         @error query
         @error err
     end
@@ -116,6 +117,7 @@ function graphql(
         result = try
             obj.client.Query(query, operationName = operationName, vars = vars)
         catch err
+            @error obj
             @error query
             @error err
         end
@@ -175,6 +177,7 @@ function setup(;host::AbstractString = get(ENV, "PGHOST", "localhost"),
             pat = DataFrame(execute(GHOST.PARALLELENABLER.conn, "SELECT login, token FROM $schema.pats ORDER BY login LIMIT 1;"))
             GHOST.PARALLELENABLER.pat = only(GitHubPersonalAccessToken.(pat.login, pat.token))
         catch err
+            @error err
             throw(ArgumentError("No PAT was provided nor available in the database. You can provide PAT directly through `setup` using the keyword argument `pats`."))
         end
     else

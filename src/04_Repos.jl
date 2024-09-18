@@ -18,13 +18,13 @@ function parse_repo(node, spdx::AbstractString)
             getproperty.(getproperty.(getproperty.(repositoryTopics.edges, :node), :topic), :name)),
      forks = forkCount,
      isinorganization = isInOrganization,
-     homepageurl = homepageUrl,
+     homepageurl = isnothing(homepageUrl) ? missing : homepageUrl,
      dependencies = getproperty.(
             filter(x -> !isnothing(x), getproperty.(getproperty.(
                 vcat(getproperty.(getproperty.(getproperty.(dependencyGraphManifests.edges, :node), :dependencies), :edges)...), 
                 :node), :repository)), 
             :nameWithOwner),
-     stargazers = stargazerCount, 
+     stargazers = isnothing(stargazerCount) ? missing : stargazerCount,
      watchers = isnothing(watchers) ? 0 : watchers.totalCount,
      releases = isnothing(releases) ? 0 : releases.totalCount,
      issues = isnothing(issues) ? 0 : issues.totalCount,
@@ -62,7 +62,17 @@ function find_repos(batch::AbstractDataFrame)
     @info "In find_repos()"
     output = DataFrame(id = String[], spdx = String[], slug = String[], createdat = DateTime[],
                        description = Union{Missing, String}[], primarylanguage = Union{Missing, String}[],
-                       branch = Union{Missing, String}[], commits = Int[])
+                       branch = Union{Missing, String}[], 
+                       topics = Union{Missing, Vector{String}}[],
+                        forks = Union{Missing, Int64}[],
+                        isinorganization = Union{Missing, Bool}[],
+                        homepageurl = Union{Missing, String}[],
+                        dependencies = Union{Missing, Vector{String}}[],
+                        stargazers = Union{Missing, Int64}[],
+                        watchers = Union{Missing, Int64}[],
+                        releases = Union{Missing, Int64}[],
+                        issues = Union{Missing, Int64}[],                       
+                       commits = Union{Missing, Int64}[])
     subsquery = join([ string("_$idx:search(query:\"is:public fork:false mirror:false archived:false license:$(batch.spdx[idx]) created:",
                      format(batch.created[idx].first, "yyyy-mm-ddTHH:MM:SS\\Z"),
                      "..",

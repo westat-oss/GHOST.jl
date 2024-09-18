@@ -103,7 +103,8 @@ function graphql(
     result = try
         obj.client.Query(query, operationName = operationName, vars = vars)
     catch err
-        err
+        @error query
+        @error err
     end
     retries = 0
     # Either it exceeded the rate limit or it timeout (for those we retry threee times)
@@ -115,7 +116,8 @@ function graphql(
         result = try
             obj.client.Query(query, operationName = operationName, vars = vars)
         catch err
-            err
+            @error query
+            @error err
         end
         isok = isa(result, Result) &&
             result.Info.status == 200 &&

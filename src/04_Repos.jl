@@ -93,6 +93,7 @@ function find_repos(batch::AbstractDataFrame)
         result = graphql(query, vars = vars)
         :Data ∈ propertynames(result) || return result
         json = JSON3.read(result.Data)
+        @info json
         new_data = reduce(vcat,
             DataFrame(parse_repo(node.node, spdx) for node in elem.edges)
             for (elem, spdx) in zip(values(json.data), batch[!,:spdx]))

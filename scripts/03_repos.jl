@@ -2,7 +2,7 @@ using GHOST
 using GHOST: groupby
 using Distributed
 setup()
-setup_parallel(2)
+setup_parallel()
 (;conn, schema) = GHOST.PARALLELENABLER
 
 data = execute(

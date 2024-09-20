@@ -25,7 +25,7 @@ end
 
 Returns a 
 """
-function query_intervals(created::Vector{Vector{Interval{DateTime,Closed,Open}}})
+function query_intervals(created::Vector{Vector{Interval{DateTime, Closed, Open}}})
     @info "In query_intervals()"
     output = DataFrame()
     graphqlremaining =
@@ -39,22 +39,23 @@ function query_intervals(created::Vector{Vector{Interval{DateTime,Closed,Open}}}
         DataFrame
     maptovalidprocs = sort!(graphqlremaining, [order(2, rev = true), order(3)])[!,1][1:min(length(READY.x), length(created))] .- 1
     for w in maptovalidprocs
-        @info "Spawning thread for {$w}"
+        @info "Spawning thread for $w."
         READY.x[w] = remotecall(GHOST.query_intervals, w + 1, popfirst!(created))
     end
     while !isempty(created)
         # local w
         w = findfirst(isready, @view(READY.x[maptovalidprocs]))
         if isnothing(w)
-            @info "Sleeping in while"
-            sleep(3)
+            @info "Sleeping in while !isempty(created)..."
+            sleep(1)
         else
             append!(output, fetch(READY.x[maptovalidprocs][w]))
             READY.x[maptovalidprocs[w]] = remotecall(GHOST.query_intervals, maptovalidprocs[w] + 1, popfirst!(created))
         end
     end
     while any(!isready, READY.x)
-        sleep(3)
+        @info "Sleeping in while any(!isready, READY.x)..."
+        sleep(1)
     end
     for f in @view(READY.x[maptovalidprocs][isready.(READY.x[maptovalidprocs])])
         append!(output, fetch(f))
@@ -67,13 +68,13 @@ end
 Returns the input if the count is 1,000 records or fewer.
 If there are more than a 1,000 it splits them based on the ratio of the count.
 """
-function cleanintervals(row)
+function cleanintervals(row, max_count)
     created = row.created
     cnt = row.count
-    if ismissing(cnt) || cnt ≤ 1_000
+    if ismissing(cnt) || cnt ≤ max_count
         DataFrame(row)
     else
-        new_step = ceil((created.last - created.first) ÷ (cnt ÷ 1_000 + 1), Second)
+        new_step = ceil((created.last - created.first) ÷ (cnt ÷ max_count + 1), Second)
         new_date_period = range(created.first, created.last, step = new_step)
         DataFrame([ (created = Interval{Closed, Open}(ds, de), count = missing) for (ds, de) in zip(new_date_period[1:end - 1], new_date_period[2:end]) ])
     end
@@ -83,7 +84,7 @@ end
 
 Prune the intervals based on the created and count values.
 """
-function prune(data)
+function prune(data, max_count)
     isempty(data) && return data
     created = data.created
     cnt = data.count
@@ -91,15 +92,15 @@ function prune(data)
     running_cnt = 0
     date_start = first(created).first
     for (created, cnt) in zip(created, cnt)
-        if (running_cnt + cnt) ≥ 1_000
-            push!(output, (created = Interval{Closed, Open}(date_start, created.first), count = running_cnt))
+        if (running_cnt + cnt) ≥ max_count
+            push!(output, (created = Interval{Closed, Open}(DateTime(date_start), DateTime(created.first)), count = running_cnt))
             date_start = created.first
             running_cnt = cnt
         else
             running_cnt += cnt
         end
     end
-    push!(output, (created = Interval{Closed, Open}(date_start, created[end].last), count = running_cnt))
+    push!(output, (created = Interval{Closed, Open}(DateTime(date_start), DateTime(created[end].last)), count = running_cnt))
     output
 end
 """
@@ -113,7 +114,7 @@ format_tsrange(obj::Interval{DateTime}) = replace(string(obj), " .." => ",")
             spdx::AbstractString,
             schema::AbstractString = "gh_2007_\$(Dates.year(floor(now(), Year) - Day(1)))")
 
-Creates records for time intervals such that they contain at most 1000 repos created in them.
+Creates records for time intervals such that they contain at most 500 repos created in them.
 Used to help meter and track the work of getting data from GitHub.
 
 This will upload the queries to the database with:
@@ -139,21 +140,31 @@ function queries(spdx::AbstractString)
                    DateTime("2013-12-30"):Day(1):DateTime(floor(now(utc_tz), Year), UTC)) |>
         unique
     created = [ Interval{Closed, Open}(start, stop) for (start, stop) in zip(@view(created[1:end - 1]), @view(created[2:end])) ]
-    created = [ created[start:stop] for (start, stop) in zip(1:185:length(created), vcat((0:185:length(created))[2:end], length(created))) ]
+    split_interval = 185
+    created = [ created[start:stop] for (start, stop) in zip(1:split_interval:length(created), vcat((0:split_interval:length(created))[2:end], length(created))) ]
     data = GHOST.query_intervals(created)
-    data = GHOST.prune(data)
-    data = reduce(vcat, cleanintervals(row) for row in eachrow(data))
+    max_count = 250
+    data = GHOST.prune(data, max_count)
+    data = reduce(vcat, cleanintervals(row, max_count) for row in eachrow(data))
     toreplace = ismissing.(data.count)
     created = data.created[toreplace]
     while !isempty(created)
-        created = [ created[start:stop] for (start, stop) in zip(1:185:length(created), vcat((0:185:length(created))[2:end], length(created))) ]
-        vals = query_intervals(created)
-        data.count[toreplace] .= get.(Ref(Dict(zip(vals.created, vals.count))), data.created[toreplace], missing)
-        data = reduce(vcat, cleanintervals(row) for row in eachrow(data))
+        created = [ created[start:stop] 
+            for (start, stop) in 
+                zip(1:split_interval:length(created), vcat((0:split_interval:length(created))[2:end], length(created))) ]
+        vals = rename(query_intervals(created), [:created, :new_count])
+        data = select(
+            leftjoin(data, vals, on = :created),
+            :created, [:count, :new_count] => ByRow((c, nc) -> ismissing(c) ? nc : c) => :count)
+        data = reduce(vcat, cleanintervals(row, max_count) for row in eachrow(data))
         toreplace = ismissing.(data.count)
         created = data.created[toreplace]
+        lenght_created = length(created)
+        @info "Count of created for $spdx is now $lenght_created."
+        toreplace_data = subset(data, :count => ByRow(ismissing))
+        @info toreplace_data
     end
-    data = prune(data)
+    data = prune(data, max_count)
     # Dates.canonicalize(Dates.CompoundPeriod(minimum(elem.last - elem.first for elem in data.created)))
     data[!,:created] .= format_tsrange.(data.created)
     data[!,:spdx] .= spdx
@@ -177,8 +188,8 @@ end
 """
     find_repo_count_for_intervals(spdx::AbstractString, created::AbstractVector{<:Interval{DateTime}})
 """
-function find_repo_count_for_intervals(spdx::AbstractString, created::AbstractVector{<:Interval{DateTime}})
-    @info "Finding repo count for {$spdx} for {$created}."
+function find_repo_count_for_intervals(spdx::AbstractString, created::AbstractVector{<:Interval{DateTime}}, max_count)
+    @info "Finding repo count for $spdx and $created."
     repositoryCount = zeros(UInt32, length(created))
     indices = range(firstindex(created), lastindex(created), step = 286)
     for idx₀ in indices
@@ -206,23 +217,23 @@ function find_repo_count_for_intervals(spdx::AbstractString, created::AbstractVe
         end
     end
     data = DataFrame(created = created, count = repositoryCount)
-    pruned = prune(data)
+    pruned = prune(data, max_count)
     cleaned_prune = reduce(vcat, cleanintervals(row) for row in eachrow(pruned))
 end
 """
     fill_missing_intervals(spdx::AbstractString, data::AbstractDataFrame)
 """
-function fill_missing_intervals(spdx::AbstractString, data::AbstractDataFrame)
-    new_data = find_repo_count_for_intervals(spdx, data.created[ismissing.(data.count)])
+function fill_missing_intervals(spdx::AbstractString, data::AbstractDataFrame, max_count)
+    new_data = find_repo_count_for_intervals(spdx, data.created[ismissing.(data.count)], max_count)
     new_data = join(data, new_data, on = :created, makeunique = true)
     new_data[!,:count] .= coalesce.(new_data.count_1, new_data.count)
-    pruned = prune(new_data[!,[:created, :count]])
+    pruned = prune(new_data[!,[:created, :count]], max_count)
     cleaned_prune = reduce(vcat, cleanintervals(row) for row in eachrow(pruned))
 end
 """
     find_queries(spdx::AbstractString)
 """
-function find_queries(spdx::AbstractString)
+function find_queries(spdx::AbstractString, max_count)
     created = vcat(DateTime("2009-01-01") - GH_FIRST_REPO_TS,
                    fill(Month(6), 2),
                    fill(Month(4), 3),
@@ -232,9 +243,9 @@ function find_queries(spdx::AbstractString)
     created = vcat(GH_FIRST_REPO_TS, GH_FIRST_REPO_TS .+ cumsum(created))
     created = vcat(created, created[end]:Day(1):DateTime(year(floor(now(utc_tz), Year))))
     created = Interval{Closed, Open}.(created[begin:end - 1], created[nextind(created, firstindex(created)):end])
-    data = find_repo_count_for_intervals(spdx, created)
+    data = find_repo_count_for_intervals(spdx, created, max_count)
     while any(ismissing, data.count)
-        data = fill_missing_intervals(spdx, data)
+        data = fill_missing_intervals(spdx, data, max_count)
     end
     data[!,:spdx] .= spdx
     data[!,[:spdx, :created, :count]]

@@ -30,3 +30,5 @@ ghost_base_data.sql
 *.pem
 *.zip
 *.pub
+run.sh
+screenlog.0

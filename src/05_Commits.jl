@@ -64,7 +64,7 @@ function query_commits(branch::AbstractString)::Nothing
     success = false
     json = try
         while !success
-            @info "Running query in query_commits({$branch})."
+            @info "Running query in query_commits($branch)."
             result = graphql(query, vars = vars, max_retries = 1)
             json = JSON3.read(result.Data)
             if haskey(json, :errors)
@@ -188,7 +188,8 @@ function query_commits(branches::AbstractVector{<:AbstractString}, batch_size::I
     vars = Dict("until" => "$(floor(now(), Year))Z",
                 "nodes" => branches,
                 "first" => batch_size)
-    @info "Running query in query_commits({$join(branches, ",")})."
+    concat_branches = join(branches, ",")
+    @info "Running query in query_commits($concat_branches)."
     result = graphql(query, vars = vars)
     json = try
         json = JSON3.read(result.Data)

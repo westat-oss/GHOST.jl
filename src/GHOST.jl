@@ -6,7 +6,7 @@ This is a module for collecting GitHub data about open source repositories and c
 module GHOST
 
 # using Base.Iterators: flatten
-using DataFrames: DataFrames, AbstractDataFrame, DataFrame, order, groupby, select, leftjoin, nrow, rename, subset
+using DataFrames: DataFrames, AbstractDataFrame, DataFrame, order, groupby, select, leftjoin, nrow, rename, subset, sort
 using Tables: ByRow
 using Diana: Diana, HTTP, Client, GraphQLClient, Result,
              # HTTP

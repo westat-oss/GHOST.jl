@@ -90,17 +90,29 @@ function prune(data, max_count)
     cnt = data.count
     output = similar(data, 0)
     running_cnt = 0
-    date_start = first(created).first
+    date_start = DateTime(first(created).first)
     for (created, cnt) in zip(created, cnt)
         if (running_cnt + cnt) ≥ max_count
-            push!(output, (created = Interval{Closed, Open}(DateTime(date_start), DateTime(created.first)), count = running_cnt))
-            date_start = created.first
-            running_cnt = cnt
+            date_end = DateTime(created.first)
+            @info "running_cnt: $running_cnt"
+            @info "date_start: $date_start"
+            @info "date_end: $date_end"
+            # We can only split if the resulting interval is logic.
+            if (date_end > date_start)
+                push!(output, (created = Interval{Closed, Open}(date_start, date_end), count = running_cnt))
+                date_start = DateTime(created.first)
+                running_cnt = cnt
+            else
+                @error "Unexpected created order in prune()"
+            end
         else
             running_cnt += cnt
         end
     end
-    push!(output, (created = Interval{Closed, Open}(DateTime(date_start), DateTime(created[end].last)), count = running_cnt))
+    date_end = DateTime(created[end].last)
+    @info "date_start: $date_start"
+    @info "date_end: $date_end"
+    push!(output, (created = Interval{Closed, Open}(date_start, date_end), count = running_cnt))
     output
 end
 """
@@ -153,9 +165,11 @@ function queries(spdx::AbstractString)
             for (start, stop) in 
                 zip(1:split_interval:length(created), vcat((0:split_interval:length(created))[2:end], length(created))) ]
         vals = rename(query_intervals(created), [:created, :new_count])
-        data = select(
-            leftjoin(data, vals, on = :created),
-            :created, [:count, :new_count] => ByRow((c, nc) -> ismissing(c) ? nc : c) => :count)
+        data = sort(
+            select(
+                leftjoin(data, vals, on = :created),
+                :created, [:count, :new_count] => ByRow((c, nc) -> ismissing(c) ? nc : c) => :count),
+            [ :created ])
         data = reduce(vcat, cleanintervals(row, max_count) for row in eachrow(data))
         toreplace = ismissing.(data.count)
         created = data.created[toreplace]

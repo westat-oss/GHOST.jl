@@ -6,7 +6,7 @@ Parses a node and returns a suitable `NamedTuple` for the table.
 function parse_repo(node, spdx::AbstractString)
     (;id, createdAt, nameWithOwner, description, primaryLanguage, defaultBranchRef, 
       repositoryTopics, forkCount, isInOrganization, homepageUrl,
-      stargazerCount,  watchers, releases, issues) = node
+      stargazerCount,  watchers) = node
     (id = id,
      spdx = spdx,
      slug = nameWithOwner,
@@ -22,8 +22,8 @@ function parse_repo(node, spdx::AbstractString)
      dependencies = missing,
      stargazers = isnothing(stargazerCount) ? missing : stargazerCount,
      watchers = isnothing(watchers) ? 0 : watchers.totalCount,
-     releases = isnothing(releases) ? 0 : releases.totalCount,
-     issues = isnothing(issues) ? 0 : issues.totalCount,
+     releases = -1,
+     issues = -1,
      commits = isnothing(defaultBranchRef) ? 0 : defaultBranchRef.target.history.totalCount,
     )
     #= Additional repo attribute candidates:

@@ -13,11 +13,6 @@ fragment A on SearchResultItemConnection {
         primaryLanguage {
           name
         }
-        languages(first:10) { 
-            nodes {
-            name
-          }                 
-        }
         defaultBranchRef { 
           id
           target { 
@@ -42,12 +37,6 @@ fragment A on SearchResultItemConnection {
         stargazerCount
         homepageUrl
         watchers {
-          totalCount
-        }
-        releases {
-          totalCount
-        }
-        issues {
           totalCount
         }
       }

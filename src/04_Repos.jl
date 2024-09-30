@@ -110,12 +110,26 @@ function find_repos(batch::AbstractDataFrame)
                  ") ON CONFLICT DO NOTHING;"))
     execute(conn, "COMMIT;")
     for row in eachrow(batch)
-        execute(conn,
-                """
-                UPDATE $schema.queries
-                SET done = true
-                WHERE spdx = '$(row.spdx)' AND '$(row.created.first)'::timestamp <@ created
-                ;
-                """)
+        retries = 0
+        insert_successful = false
+        max_retries = 6
+        while !insert_successful && retries < max_retries
+            try
+                retries += 1
+                execute(conn,
+                        """
+                        UPDATE $schema.queries
+                        SET done = true
+                        WHERE spdx = '$(row.spdx)' AND '$(row.created.first)'::timestamp <@ created
+                        ;
+                        """)
+                insert_successful = true
+            catch err
+                @error err
+                sleep_seconds = 15 * retries
+                @info "Sleeping $sleep_seconds seconds after error in while loop to save repos tp pgsql, retry $retries of $max_retries."
+                sleep(sleep_seconds)
+            end
+        end
     end
 end

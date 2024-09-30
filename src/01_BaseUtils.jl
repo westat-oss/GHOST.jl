@@ -90,7 +90,7 @@ function graphql(
     query::AbstractString = query,
     operationName::AbstractString = string(match(r"(?<=query )\w+(?=[\(|\{])", query).match);
     vars::Dict{String} = Dict{String,Any}(),
-    max_retries::Integer = 3,
+    max_retries::Integer = 9,
     )
     obj = PARALLELENABLER.pat
     # operationName = match(r"(?<=query )\w+", query).match
@@ -113,7 +113,10 @@ function graphql(
         result.Info.status == 200 &&
         result.Data ≠ """{"errors":[{"type":"RATE_LIMITED","message":"API rate limit exceeded"}]}"""
     while !isok && retries < max_retries
-        sleep(61)
+        sleep_seconds = 15 * retries
+        retries += 1
+        @info "Sleeping for $sleep_seconds in graphql() in retry $retry of $max_retries..."
+        sleep(sleep_seconds)
         result = try
             obj.client.Query(query, operationName = operationName, vars = vars)
         catch err
@@ -124,7 +127,6 @@ function graphql(
         isok = isa(result, Result) &&
             result.Info.status == 200 &&
             result.Data ≠ """{"errors":[{"type":"RATE_LIMITED","message":"API rate limit exceeded"}]}"""
-        retries += 1
     end
     # @assert isok (query = query, vars = vars, result = result)
     update!(obj)

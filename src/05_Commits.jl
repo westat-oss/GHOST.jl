@@ -33,7 +33,7 @@ end
 """
     query_commits(branch::AbstractString)::Nothing
 """
-function query_commits(branch::AbstractString)::Nothing
+function query_commits(branch::AbstractString; batch_size::Integer = 64)::Nothing
     (;conn, schema) = GHOST.PARALLELENABLER
     @info "In query_commits()"
     since = execute(conn, "SELECT MIN(committedat) AS since FROM $(schema).commits WHERE branch = '$branch';") |>
@@ -59,7 +59,7 @@ function query_commits(branch::AbstractString)::Nothing
     vars = Dict("since" => string(since, "Z"),
                 "until" => "2025-01-01T00:00:00Z",
                 "node" => branch,
-                "first" => 32,
+                "first" => batch_size
                 )
     success = false
     json = try
@@ -102,12 +102,12 @@ function query_commits(branch::AbstractString)::Nothing
     while json.pageInfo.hasNextPage
         sleep(0.25)
         vars["until"] = string(DateTime(output[end,:committed_ts]), "Z")
-        vars["first"] = 64
+        vars["first"] = batch_size
         success = false
         json = try
             while !success
                 @info "Running query in query_commits()."
-                result = graphql(query, vars = vars, max_retries = 1)
+                result = graphql(query, vars = vars, max_retries = 3)
                 @info "Parsing JSON in query_commits()."
                 json = JSON3.read(result.Data)
                 if haskey(json, :errors)

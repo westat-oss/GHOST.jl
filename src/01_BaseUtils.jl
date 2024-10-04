@@ -90,7 +90,7 @@ function graphql(
     query::AbstractString = query,
     operationName::AbstractString = string(match(r"(?<=query )\w+(?=[\(|\{])", query).match);
     vars::Dict{String} = Dict{String,Any}(),
-    max_retries::Integer = 18,
+    max_retries::Integer = 72,
     )
     obj = PARALLELENABLER.pat
     # operationName = match(r"(?<=query )\w+", query).match

@@ -11,9 +11,10 @@ data = execute(conn,
     (obj -> getproperty.(obj, :branch))
 time_start = now()
 
+@info "Getting commits for $(length(data)) repo branches."
 println(time_start)
-# @sync @distributed for idx in 1:8:500
-for idx in 1:8:500
+@sync @distributed for idx in 1:8:length(data)
+#for idx in 1:8:500
     query_commits(view(data, idx:min(idx + 7, lastindex(data))), 100)
     sleep(0.25)
 end

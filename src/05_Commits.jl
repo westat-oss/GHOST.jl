@@ -13,7 +13,7 @@ This parses a commit node and adds the branch it queried.
 """
 function parse_commit(branch, node)
     if isnothing(node)
-        println(branch)
+        @error(branch)
         throw(ErrorException("Weird thing going on"))
     end
     authors = parse_author.(getproperty.(node.authors.edges, :node))
@@ -91,6 +91,7 @@ function query_commits(branch::AbstractString)::Nothing
     for edge in json.edges
         push!(output, parse_commit(branch, edge.node))
     end
+    @info "Saving commits for branch $branch."
     execute(conn, "BEGIN;")
     load!(output,
           conn,
@@ -159,7 +160,7 @@ function query_commits(branch::AbstractString)::Nothing
             WHERE branch = '$branch'
             ;
             """)
-    println("$branch done at $(now())")
+    @info("$branch done at $(now())")
     nothing
 end
 """
@@ -168,6 +169,7 @@ end
 function query_commits(branches::AbstractVector{<:AbstractString}, batch_size::Integer)::Nothing
     (;conn, schema) = PARALLELENABLER
     @info "In query_commits()"
+    @info branches
     output = DataFrame(
         branch = String[],
         id = String[],
@@ -205,6 +207,7 @@ function query_commits(branches::AbstractVector{<:AbstractString}, batch_size::I
     end
     for (branch, nodes) in zip(branches, values(json.nodes))
         if isnothing(nodes)
+            @warn "Setting $branch to NOT_FOUND."
             execute(conn, "UPDATE $(schema).repos SET status = 'NOT_FOUND' WHERE branch = '$branch';")
         else
             for edge in nodes.target.history.edges
@@ -219,6 +222,7 @@ function query_commits(branches::AbstractVector{<:AbstractString}, batch_size::I
             end
         end
     end
+    @info "Saving commits for branch batch."
     try
         execute(conn, "BEGIN;")
         load!(output,
@@ -228,14 +232,17 @@ function query_commits(branches::AbstractVector{<:AbstractString}, batch_size::I
                      ") ON CONFLICT ON CONSTRAINT commits_pkey DO NOTHING;"))
         execute(conn, "COMMIT;")
     catch err
-        println(branches)
+        @error(branches)
         throw(err)
     end
 
+    @info "Saving users for branch batch."
     output_users = DataFrame(
         users = collect(Iterators.flatten(output.users)), 
         names = collect(Iterators.flatten(output.names)),
-        emails = collect(Iterators.flatten(output.emails)))
+        emails = collect(Iterators.flatten(output.emails))) |>
+        ou -> subset(ou, :users => ByRow(!ismissing)) |>
+        ou -> subset(ou, :emails => ByRow(!ismissing))
     try
         execute(conn, "BEGIN;")
         load!(output_users,
@@ -245,10 +252,11 @@ function query_commits(branches::AbstractVector{<:AbstractString}, batch_size::I
                      ") ON CONFLICT ON CONSTRAINT users_pkey DO NOTHING;"))
         execute(conn, "COMMIT;")
     catch err
-        println(branches)
+        @error(branches)
         throw(err)
     end
 
+    @info "Marking repos in branch batch as Done."
     execute(conn,
             """
             UPDATE $(schema).repos

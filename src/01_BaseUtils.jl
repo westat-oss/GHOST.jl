@@ -90,7 +90,7 @@ function graphql(
     query::AbstractString = query,
     operationName::AbstractString = string(match(r"(?<=query )\w+(?=[\(|\{])", query).match);
     vars::Dict{String} = Dict{String,Any}(),
-    max_retries::Integer = 9,
+    max_retries::Integer = 18,
     )
     obj = PARALLELENABLER.pat
     # operationName = match(r"(?<=query )\w+", query).match
@@ -109,13 +109,16 @@ function graphql(
     end
     retries = 0
     # Either it exceeded the rate limit or it timeout (for those we retry threee times)
+    # Or a GitHub oops_msg_fragment
+    oops_msg_fragment = "Something went wrong while executing your query."
     isok = isa(result, Result) &&
         result.Info.status == 200 &&
-        result.Data ≠ """{"errors":[{"type":"RATE_LIMITED","message":"API rate limit exceeded"}]}"""
+        result.Data ≠ """{"errors":[{"type":"RATE_LIMITED","message":"API rate limit exceeded"}]}""" &&
+        !occursin(oops_msg_fragment, result.Data)
     while !isok && retries < max_retries
-        sleep_seconds = 15 * retries
         retries += 1
-        @info "Sleeping for $sleep_seconds in graphql() in retry $retry of $max_retries..."
+        sleep_seconds = 15 * retries
+        @info "Sleeping for $sleep_seconds in graphql() in retry $retries of $max_retries..."
         sleep(sleep_seconds)
         result = try
             obj.client.Query(query, operationName = operationName, vars = vars)
@@ -126,7 +129,8 @@ function graphql(
         end
         isok = isa(result, Result) &&
             result.Info.status == 200 &&
-            result.Data ≠ """{"errors":[{"type":"RATE_LIMITED","message":"API rate limit exceeded"}]}"""
+            result.Data ≠ """{"errors":[{"type":"RATE_LIMITED","message":"API rate limit exceeded"}]}""" &&
+            !occursin(oops_msg_fragment, result.Data)
     end
     # @assert isok (query = query, vars = vars, result = result)
     update!(obj)

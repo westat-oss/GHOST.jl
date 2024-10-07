@@ -192,11 +192,12 @@ function query_commits(branches::AbstractVector{<:AbstractString}, batch_size::I
                 "first" => batch_size)
     concat_branches = join(branches, ",")
     @info "Running query in query_commits($concat_branches)."
-    result = graphql(query, vars = vars)
+    result = graphql(query, vars = vars, max_retries = 3)
     json = try
         json = JSON3.read(result.Data)
         json.data
     catch err
+        @error err
         if length(branches) == 1
             execute(conn, "UPDATE $(schema).repos SET status = 'FOR_LATER' WHERE branch = '$(only(branches))';")
         else

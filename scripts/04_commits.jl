@@ -18,7 +18,7 @@ function collect_commits(min_lim, max_lim)
     @info "Started collecting commits for repos with more than $min_lim and up to $max_lim commits @ $time_start."
     (;conn, schema) = GHOST.PARALLELENABLER
     branches = get_branches(conn, schema, min_lim, max_lim)
-    mini_batch_size = 4
+    mini_batch_size = 8
     while length(branches) > 0
         @info "Getting commits for $(length(branches)) repo branches."
         @sync @distributed for idx in 1:mini_batch_size:length(branches)
@@ -34,8 +34,3 @@ function collect_commits(min_lim, max_lim)
 end
 
 collect_commits(0, 100)
-collect_commits(100, 1000)
-collect_commits(1_000, 10_000)
-collect_commits(10_000, 100_000)
-collect_commits(100_000, 1_000_000)
-collect_commits(1_000_000, 5_000_000)

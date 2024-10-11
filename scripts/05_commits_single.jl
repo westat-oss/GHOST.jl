@@ -7,7 +7,7 @@ setup_parallel()
 
 (;conn, schema, pat) = GHOST.PARALLELENABLER
 data = execute(conn,
-               "SELECT branch FROM $(schema).repos WHERE status = 'Init' ORDER BY commits;",
+               "SELECT branch FROM $(schema).repos WHERE status = 'Init' AND commits > 100 ORDER BY commits;",
                not_null = true) |>
     (obj -> getproperty.(obj, :branch))
 

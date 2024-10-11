@@ -77,7 +77,7 @@ function query_commits(branch::AbstractString; batch_size::Integer = 64)::Nothin
                 json = json.data.node.target.history
                 success = !isempty(json.edges)
             catch err
-                @error err
+                @warn err
                 vars["first"] == 1 && throw(ErrorException("$branch is not playing nice."))
                 vars["first"] ÷= 2
                 sleep(0.25)

@@ -589,6 +589,10 @@ CREATE TABLE ghost_partitions.repos_2026 PARTITION OF ghost.repos FOR VALUES FRO
 CREATE TABLE ghost_partitions.repos_2027 PARTITION OF ghost.repos FOR VALUES FROM ('2027-01-01') TO ('2028-01-01');
 CREATE TABLE ghost_partitions.repos_2028 PARTITION OF ghost.repos FOR VALUES FROM ('2028-01-01') TO ('2029-01-01');
 
+-- Columns collected for users after commits are done
+ALTER TABLE ghost.test_usr ADD COLUMN createdat TIMESTAMP WITHOUT TIME ZONE;
+ALTER TABLE ghost.test_usr ADD COLUMN location TEXT;
+
 REVOKE USAGE ON SCHEMA public FROM PUBLIC;
 GRANT ALL ON SCHEMA public TO PUBLIC;
 

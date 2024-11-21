@@ -201,6 +201,7 @@ CREATE TABLE ghost.pats (
     token text NOT NULL
 );
 
+ALTER TABLE ghost.pats ADD COLUMN high_permission BOOL;
 
 ALTER TABLE ghost.pats OWNER TO postgres;
 
@@ -376,6 +377,8 @@ CREATE TABLE ghost.test_usr (
     login text NOT NULL
 );
 
+ALTER TABLE ghost.test_usr ADD COLUMN createdat timestamp without time zone, ADD COLUMN location text;
+ALTER TABLE ghost.test_usr ADD COLUMN bio text, ADD COLUMN company text, ADD COLUMN pronouns text, ADD COLUMN isDeveloperProgramMember bool, ADD COLUMN isEmployee bool, ADD COLUMN updatedAt timestamp without time zone, ADD COLUMN twitterUsername text, ADD COLUMN websiteUrl text, ADD COLUMN socialAccounts text[], ADD COLUMN organization_ids text[], ADD COLUMN organization_logins text[], ADD COLUMN user_email text;
 
 ALTER TABLE ghost.test_usr OWNER TO postgres;
 

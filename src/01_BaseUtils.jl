@@ -214,7 +214,15 @@ function setup_parallel(limit::Integer = 0; password::AbstractString = get(ENV, 
     else
         pat = DataFrame(execute(conn, "SELECT login, token FROM $schema.pats ORDER BY login;"))
     end
+
+    for row in eachrow(pat)
+        GitHubPersonalAccessToken.(row["login"], row["token"])
+    end
+
     pats = GitHubPersonalAccessToken.(pat.login, pat.token)
+
+    @info pat.login
+
     npats = length(pats)
     addprocs(npats, exeflags = `--proj`)
     remotecall_eval(Main, workers(), :(using GHOST))

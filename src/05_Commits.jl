@@ -36,101 +36,14 @@ end
 function query_commits(branch::AbstractString; batch_size::Integer = 64)::Nothing
     (;conn, schema) = GHOST.PARALLELENABLER
     @info "In query_commits()"
-    since = execute(conn, "SELECT MIN(committedat) AS since FROM $(schema).commits WHERE branch = '$branch';") |>
-        (obj -> only(getproperty.(obj, :since)))
-    since = coalesce(since, GHOST.GH_FIRST_REPO_TS)
-    output = DataFrame(
-        branch = String[],
-        id = String[],
-        sha1 = String[],
-        committed_ts = String[],
-        emails = Union{Missing, String, Vector{Union{Missing, String}}, Vector{String}, Vector{Missing}}[],
-        names = Union{Missing, String, Vector{Union{Missing, String}}, Vector{String}, Vector{Missing}}[],
-        users = Union{Missing, String, Vector{Union{Missing, String}}, Vector{String}, Vector{Missing}}[],
-        additions = Int[],
-        deletions = Int[]
-    )
-    query = String(read(joinpath(pkgdir(GHOST), "src", "assets", "graphql", "04_commits_single.graphql"))) |>
-        (obj -> replace(obj, r"\s+" => " ")) |>
-        (obj -> replace(obj, r"\s+(\{|\}|\:)\s*" => s"\1")) |>
-        (obj -> replace(obj, r"(:|,|\.{3})\s*" => s"\1")) |>
-        strip |>
-        string
-    vars = Dict("since" => string(since, "Z"),
-                "until" => "2025-01-01T00:00:00Z",
-                "node" => branch,
-                "first" => batch_size
-                )
-    success = false
-    json = try
-        while !success
-            @info "Running query in query_commits($branch)."
-            result = graphql(query, vars = vars, max_retries = 1)
-            json = JSON3.read(result.Data)
-            if haskey(json, :errors)
-                if first(json.errors).type == "NOT_FOUND"
-                    execute(conn, "UPDATE $schema.repos SET status = 'NOT_FOUND' WHERE branch = '$branch';")
-                    return
-                end
-            end
-            try
-                json = json.data.node.target.history
-                success = !isempty(json.edges)
-            catch err
-                @warn err
-                vars["first"] == 1 && throw(ErrorException("$branch is not playing nice."))
-                vars["first"] ÷= 2
-                sleep(0.25)
-            end
-        end
-        json
-    catch err
-        @error err
-        throw(ErrorException("$branch is not playing nice ($first)."))
-    end
-    for edge in json.edges
-        push!(output, parse_commit(branch, edge.node))
-    end
-    @info "Saving commits for branch $branch."
-    execute(conn, "BEGIN;")
-    load!(output,
-          conn,
-          string("INSERT INTO $(schema).commits VALUES (",
-                 join(("\$$i" for i in 1:size(output, 2)), ','),
-                 ") ON CONFLICT ON CONSTRAINT commits_pkey DO NOTHING;"))
-    execute(conn, "COMMIT;")
-    while json.pageInfo.hasNextPage
-        sleep(0.25)
-        vars["until"] = string(DateTime(output[end,:committed_ts]), "Z")
-        vars["first"] = batch_size
-        success = false
-        json = try
-            while !success
-                @info "Running query in query_commits()."
-                result = graphql(query, vars = vars, max_retries = 3)
-                @info "Parsing JSON in query_commits()."
-                json = JSON3.read(result.Data)
-                if haskey(json, :errors)
-                    if first(json.errors).type == "NOT_FOUND"
-                        @warn "Repository was not found."
-                        execute(conn, "UPDATE $schema.repos SET status = 'NOT_FOUND' WHERE branch = '$branch';")
-                        return
-                    end
-                end
-                try
-                    json = json.data.node.target.history
-                    success = !isempty(json.edges)
-                catch err
-                    @error err
-                    vars["first"] == 1 && throw(ErrorException("$branch is not playing nice."))
-                    vars["first"] ÷= 2
-                    sleep(0.25)
-                end
-            end
-            json
-        catch err
-            throw(ErrorException("$branch is not playing nice ($first)."))
-        end
+    #since = execute(conn, "SELECT MIN(committedat) AS since FROM $(schema).commits WHERE branch = '$branch';") |>
+    #    (obj -> only(getproperty.(obj, :since)))
+    #since = coalesce(since, GHOST.GH_FIRST_REPO_TS)
+    since = GHOST.GH_FIRST_REPO_TS
+
+    try
+        execute(conn, "BEGIN;")
+
         output = DataFrame(
             branch = String[],
             id = String[],
@@ -142,25 +55,132 @@ function query_commits(branch::AbstractString; batch_size::Integer = 64)::Nothin
             additions = Int[],
             deletions = Int[]
         )
+        query = String(read(joinpath(pkgdir(GHOST), "src", "assets", "graphql", "04_commits_single.graphql"))) |>
+            (obj -> replace(obj, r"\s+" => " ")) |>
+            (obj -> replace(obj, r"\s+(\{|\}|\:)\s*" => s"\1")) |>
+            (obj -> replace(obj, r"(:|,|\.{3})\s*" => s"\1")) |>
+            strip |>
+            string
+        vars = Dict("since" => string(since, "Z"),
+                    "until" => "2025-01-01T00:00:00Z",
+                    "node" => branch,
+                    "first" => batch_size
+                    )
+        success = false
+
+
+        json = try
+            while !success
+                @info "Running query in query_commits($branch)."
+                result = graphql(query, vars = vars, max_retries = 1)
+                json = JSON3.read(result.Data)
+                if haskey(json, :errors)
+                    if first(json.errors).type == "NOT_FOUND"
+                        execute(conn, "UPDATE $schema.repos SET status = 'NOT_FOUND' WHERE branch = '$branch';")
+                        execute(conn, "COMMIT;")
+                        return
+                    end
+                end
+                try
+                    json = json.data.node.target.history
+                    success = !isempty(json.edges)
+                catch err
+                    @warn err
+                    vars["first"] == 1 && throw(ErrorException("$branch is not playing nice."))
+                    vars["first"] ÷= 2
+                end
+            end
+            json
+        catch err
+            @error err
+            throw(ErrorException("$branch is not playing nice ($first)."))
+        end
         for edge in json.edges
             push!(output, parse_commit(branch, edge.node))
         end
+        @info "Saving commits for branch $branch."
         execute(conn, "BEGIN;")
         load!(output,
-              conn,
-              string("INSERT INTO $schema.commits VALUES (",
-                     join(("\$$i" for i in 1:size(output, 2)), ','),
-                     ") ON CONFLICT ON CONSTRAINT commits_pkey DO NOTHING;"))
+            conn,
+            string("INSERT INTO $(schema).commits VALUES (",
+                    join(("\$$i" for i in 1:size(output, 2)), ','),
+                    ") ON CONFLICT ON CONSTRAINT commits_pkey DO NOTHING;"))
         execute(conn, "COMMIT;")
+        while json.pageInfo.hasNextPage
+            if (maximum(output[!, "committed_ts"]) == minimum(output[!, "committed_ts"]))
+                new_since = string(DateTime(maximum(output[!, "committed_ts"])) + Hour(1), "Z")
+                vars["since"] = new_since
+            else
+                vars["since"] = string(DateTime(maximum(output[!, "committed_ts"])), "Z")
+            end
+
+            vars["first"] = batch_size
+            success = false
+            json = try
+                while !success
+                    @debug "Running query in query_commits()."
+                    result = graphql(query, vars = vars, max_retries = 3)
+                    @debug "Parsing JSON in query_commits()."
+                    json = JSON3.read(result.Data)
+                    if haskey(json, :errors)
+                        if first(json.errors).type == "NOT_FOUND"
+                            @warn "Repository was not found."
+                            execute(conn, "UPDATE $schema.repos SET status = 'NOT_FOUND' WHERE branch = '$branch';")
+                            execute(conn, "COMMIT;")
+                            return
+                        end
+                    end
+                    try
+                        json = json.data.node.target.history
+                        success = !isempty(json.edges)
+                    catch err
+                        @error err
+                        vars["first"] == 1 && throw(ErrorException("$branch is not playing nice."))
+                        vars["first"] ÷= 2
+                    end
+                end
+                json
+            catch err
+                @error err
+                execute(conn, "ROLLBACK;")
+                throw(ErrorException("$branch is not playing nice ($first)."))
+            end
+            output = DataFrame(
+                branch = String[],
+                id = String[],
+                sha1 = String[],
+                committed_ts = String[],
+                emails = Union{Missing, String, Vector{Union{Missing, String}}, Vector{String}, Vector{Missing}}[],
+                names = Union{Missing, String, Vector{Union{Missing, String}}, Vector{String}, Vector{Missing}}[],
+                users = Union{Missing, String, Vector{Union{Missing, String}}, Vector{String}, Vector{Missing}}[],
+                additions = Int[],
+                deletions = Int[]
+            )
+
+            for edge in json.edges
+                push!(output, parse_commit(branch, edge.node))
+            end
+            @info "Saving commits for $branch"
+            # execute(conn, "BEGIN;")
+            load!(output,
+                conn,
+                string("INSERT INTO $schema.commits VALUES (",
+                        join(("\$$i" for i in 1:size(output, 2)), ','),
+                        ") ON CONFLICT ON CONSTRAINT commits_pkey DO NOTHING;"))
+        end
+        execute(conn,
+                """
+                UPDATE $(schema).repos
+                SET status = 'Done'
+                WHERE branch = '$branch'
+                ;
+                """)
+        execute(conn, "COMMIT;")
+        @info("$branch done at $(now())")
+    catch err
+        @error err
+        execute(conn, "ROLLBACK;")
     end
-    execute(conn,
-            """
-            UPDATE $(schema).repos
-            SET status = 'Done'
-            WHERE branch = '$branch'
-            ;
-            """)
-    @info("$branch done at $(now())")
     nothing
 end
 """

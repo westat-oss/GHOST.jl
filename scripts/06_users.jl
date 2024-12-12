@@ -1,5 +1,5 @@
 using GHOST
-setup(pats = [GitHubPersonalAccessToken("aaamarcelo", "xxxxx")])
+setup(pats = [GitHubPersonalAccessToken("jeremycorry@westat.com", "xxx")])
 (;conn, schema, pat) = GHOST.PARALLELENABLER
 
 # __typename below is what tells us user / bot / organization
@@ -73,7 +73,7 @@ function query_users(users::Vector{<:String})
 end
 
 
-# while not done, set done = true when no goups left
+# while not done, set done = true when no groups left
 done = false
 while !done
     users = execute(conn,
@@ -97,7 +97,7 @@ while !done
             continue
         end
     end
-    if users == 0
+    if length(users) == 0
         done = true
     end
 end

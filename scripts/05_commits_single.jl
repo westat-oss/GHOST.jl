@@ -8,7 +8,7 @@ setup_parallel()
 (;conn, schema, pat) = GHOST.PARALLELENABLER
 # only doing repos that were createdat 2020 or later to start
 data = execute(conn,
-               "SELECT branch FROM $(schema).repos WHERE status = 'Init' AND commits > 100 AND commits < 638 AND createdat >= '2020-01-01' AND createdat < '2021-01-01' ORDER BY commits;",
+               "SELECT branch FROM $(schema).repos WHERE status = 'Init' AND commits > 0 AND commits < 213 AND createdat <= '2020-01-01' ORDER BY commits",
                not_null = true) |>
     (obj -> getproperty.(obj, :branch))
 

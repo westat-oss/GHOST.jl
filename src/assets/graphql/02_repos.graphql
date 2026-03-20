@@ -13,11 +13,6 @@ fragment A on SearchResultItemConnection {
         primaryLanguage {
           name
         }
-        languages(first:10) { 
-            nodes {
-            name
-          }                 
-        }
         defaultBranchRef { 
           id
           target { 
@@ -28,7 +23,7 @@ fragment A on SearchResultItemConnection {
             } 
           } 
         }
-        repositoryTopics(first:50) {
+        repositoryTopics(first:10) {
           edges {
             node {
               topic {
@@ -41,31 +36,7 @@ fragment A on SearchResultItemConnection {
         isInOrganization
         stargazerCount
         homepageUrl
-        dependencyGraphManifests(first: 50)
-        {
-          totalCount
-          edges {
-            node {
-              dependencies {
-                edges {
-                  node {
-                    packageName
-                      repository {
-                        nameWithOwner
-                      }
-                    }
-                }
-              }
-            }
-          }
-        }
         watchers {
-          totalCount
-        }
-        releases {
-          totalCount
-        }
-        issues {
           totalCount
         }
       }

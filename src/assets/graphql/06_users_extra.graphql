@@ -1,0 +1,39 @@
+fragment a on Node {
+  id
+  ... on User {
+    bio
+    company
+    pronouns
+    isDeveloperProgramMember
+    isEmployee
+    updatedAt
+    twitterUsername
+    websiteUrl
+    socialAccounts(first: 10) {
+      totalCount
+      edges {
+        node {
+          url
+        }
+      }
+    }
+    organizations(first: 100) {
+      totalCount
+      pageInfo {
+        hasNextPage
+        hasPreviousPage
+        startCursor
+        endCursor
+      }
+      edges {
+        node {
+          id
+          login
+          name
+          description
+        }
+      }
+    }
+    email
+  }
+}

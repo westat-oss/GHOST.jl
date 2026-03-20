@@ -1,0 +1,17 @@
+query FindRepos($username: String!, $since: DateTime, $until: DateTime) {
+    user (login: $username)  {
+          id
+          contributionsCollection (from:$since, to:$until) {
+          commitContributionsByRepository (maxRepositories: 100) {
+            repository {
+              name,
+              id,
+              isInOrganization,
+              owner {
+                login
+              }
+            }
+        }
+      }
+  }
+}

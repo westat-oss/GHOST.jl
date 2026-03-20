@@ -90,7 +90,7 @@ function graphql(
     query::AbstractString = query,
     operationName::AbstractString = string(match(r"(?<=query )\w+(?=[\(|\{])", query).match);
     vars::Dict{String} = Dict{String,Any}(),
-    max_retries::Integer = 3,
+    max_retries::Integer = 216,
     )
     obj = PARALLELENABLER.pat
     # operationName = match(r"(?<=query )\w+", query).match
@@ -109,11 +109,17 @@ function graphql(
     end
     retries = 0
     # Either it exceeded the rate limit or it timeout (for those we retry threee times)
+    # Or a GitHub oops_msg_fragment
+    oops_msg_fragment = "Something went wrong while executing your query."
     isok = isa(result, Result) &&
         result.Info.status == 200 &&
-        result.Data ≠ """{"errors":[{"type":"RATE_LIMITED","message":"API rate limit exceeded"}]}"""
+        result.Data ≠ """{"errors":[{"type":"RATE_LIMITED","message":"API rate limit exceeded"}]}""" &&
+        !occursin(oops_msg_fragment, result.Data)
     while !isok && retries < max_retries
-        sleep(61)
+        retries += 1
+        sleep_seconds = 5 * retries
+        @info "Sleeping for $sleep_seconds in graphql() in retry $retries of $max_retries..."
+        sleep(sleep_seconds)
         result = try
             obj.client.Query(query, operationName = operationName, vars = vars)
         catch err
@@ -123,8 +129,8 @@ function graphql(
         end
         isok = isa(result, Result) &&
             result.Info.status == 200 &&
-            result.Data ≠ """{"errors":[{"type":"RATE_LIMITED","message":"API rate limit exceeded"}]}"""
-        retries += 1
+            result.Data ≠ """{"errors":[{"type":"RATE_LIMITED","message":"API rate limit exceeded"}]}""" &&
+            !occursin(oops_msg_fragment, result.Data)
     end
     # @assert isok (query = query, vars = vars, result = result)
     update!(obj)
@@ -187,6 +193,64 @@ function setup(;host::AbstractString = get(ENV, "PGHOST", "localhost"),
     end
     nothing
 end
+"""
+    setup(;host::AbstractString = get(ENV, "PGHOST", "localhost"),
+           port::AbstractString = get(ENV, "PGPORT", "5432"),
+           dbname::AbstractString = get(ENV, "PGDATABASE", "postgres"),
+           user::AbstractString = get(ENV, "PGUSER", "postgres"),
+           password::AbstractString = get(ENV, "PGPASSWORD", "postgres"),
+           schema::AbstractString = "gh_2007_\$(year(floor(now(utc_tz), Year) - Day(1)))",
+           pats::Union{Nothing, Vector{GitHubPersonalAccessToken}} = nothing)
+
+Sets up your PostgreSQL database for the project.
+
+# Example
+
+```julia-repl
+julia> setup_high_prio(high_permisison = false)
+
+```
+
+```julia-repl
+julia> setup_high_prio()
+
+```
+"""
+function setup_high_prio(;host::AbstractString = get(ENV, "PGHOST", "localhost"),
+                port::AbstractString = get(ENV, "PGPORT", "5432"),
+                dbname::AbstractString = get(ENV, "PGDATABASE", "postgres"),
+                user::AbstractString = get(ENV, "PGUSER", "postgres"),
+                password::AbstractString = get(ENV, "PGPASSWORD", "postgres"),
+                schema::AbstractString = "ghost",
+                pats::Union{Nothing, Vector{GitHubPersonalAccessToken}} = nothing,
+                init_schema::Bool = false,
+                high_permission::Bool = true)
+    GHOST.PARALLELENABLER.conn = Connection("host = $host port = $port dbname = $dbname user = $user password = $password")
+    GHOST.PARALLELENABLER.schema = schema
+    schema = "ghost"
+    if init_schema
+        execute(GHOST.PARALLELENABLER.conn,
+                replace(join([
+                            String(read(joinpath(@__DIR__, "assets", "sql", "ddl", "db_definition.sql")))
+                            ],
+                            ' '),
+                        "schema" => schema))
+    end
+    if isnothing(pats)
+        try
+            pat = DataFrame(execute(GHOST.PARALLELENABLER.conn, "SELECT login, token FROM $schema.pats WHERE high_permission = $high_permission ORDER BY login LIMIT 1;"))
+            GHOST.PARALLELENABLER.pat = only(GitHubPersonalAccessToken.(pat.login, pat.token))
+        catch err
+            @error err
+            throw(ArgumentError("No PAT was provided nor available in the database. You can provide PAT directly through `setup` using the keyword argument `pats`."))
+        end
+    else
+        pats = DataFrame((login = pat.login, token = pat.token) for pat in pats)
+        load!(pats, GHOST.PARALLELENABLER.conn, "INSERT INTO $(schema).pats VALUES(\$1, \$2) ON CONFLICT DO NOTHING;")
+        GHOST.PARALLELENABLER.pat = GitHubPersonalAccessToken(values(first(pats))...)
+    end
+    nothing
+end
 
 """
     setup_parallel(limit::Integer = 0; password::AbstractString = get(ENV, "PGPASSWORD", "postgres"))::Nothing
@@ -208,7 +272,65 @@ function setup_parallel(limit::Integer = 0; password::AbstractString = get(ENV, 
     else
         pat = DataFrame(execute(conn, "SELECT login, token FROM $schema.pats ORDER BY login;"))
     end
+
+    for row in eachrow(pat)
+        println(row["login"])
+        GitHubPersonalAccessToken.(row["login"], row["token"])
+    end
+
     pats = GitHubPersonalAccessToken.(pat.login, pat.token)
+
+    @info pat.login
+
+    npats = length(pats)
+    addprocs(npats, exeflags = `--proj`)
+    remotecall_eval(Main, workers(), :(using GHOST))
+    @everywhere workers() host = $host
+    @everywhere workers() port = $port
+    @everywhere workers() dbname = $dbname
+    @everywhere workers() user = $user
+    @everywhere workers() password = $password
+    @everywhere workers() GHOST.PARALLELENABLER.conn = Connection("$host $port $dbname $user password = $password")
+    @everywhere workers() GHOST.PARALLELENABLER.schema = $schema
+    GHOST.READY.x = Vector{Future}(undef, npats)
+    for proc ∈ workers()
+        GHOST.READY.x[proc - 1] = GHOST.@spawnat proc nothing
+        pat = pats[proc - 1]
+        expr = :(GHOST.PARALLELENABLER.pat = $pat)
+        remotecall_eval(Main, proc, expr)
+    end
+end
+
+"""
+    setup_parallel_high_prio(limit::Integer = 0; password::AbstractString = get(ENV, "PGPASSWORD", "postgres"))::Nothing
+
+Setup workers.
+"""
+function setup_parallel_high_prio(limit::Integer = 0; password::AbstractString = get(ENV, "PGPASSWORD", "postgres"), high_permission::Bool = true)
+    (;conn, schema) = PARALLELENABLER
+    io = IOBuffer()
+    show(io, conn)
+    s = String(take!(io))
+    lns = strip.(split(s, '\n'))
+    host = lns[findfirst(ln -> startswith(ln, "host = "), lns)]
+    port = lns[findfirst(ln -> startswith(ln, "port = "), lns)]
+    dbname = lns[findfirst(ln -> startswith(ln, "dbname = "), lns)]
+    user = lns[findfirst(ln -> startswith(ln, "user = "), lns)]
+    if limit > 0
+        pat = DataFrame(execute(conn, "SELECT login, token FROM $schema.pats where high_permission = $high_permission ORDER BY login LIMIT $limit;"))
+    else
+        pat = DataFrame(execute(conn, "SELECT login, token FROM $schema.pats where high_permission = $high_permission ORDER BY login;"))
+    end
+
+    for row in eachrow(pat)
+        println(row["login"])
+        GitHubPersonalAccessToken.(row["login"], row["token"])
+    end
+
+    pats = GitHubPersonalAccessToken.(pat.login, pat.token)
+
+    @info pat.login
+
     npats = length(pats)
     addprocs(npats, exeflags = `--proj`)
     remotecall_eval(Main, workers(), :(using GHOST))

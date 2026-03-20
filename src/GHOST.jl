@@ -6,7 +6,8 @@ This is a module for collecting GitHub data about open source repositories and c
 module GHOST
 
 # using Base.Iterators: flatten
-using DataFrames: DataFrames, AbstractDataFrame, DataFrame, order, groupby
+using DataFrames: DataFrames, AbstractDataFrame, DataFrame, order, groupby, select, leftjoin, nrow, rename, subset, sort
+using Tables: ByRow
 using Diana: Diana, HTTP, Client, GraphQLClient, Result,
              # HTTP
              HTTP.request, HTTP.ExceptionRequest.StatusError
@@ -63,7 +64,7 @@ end
 const READY = Ref(Future[])
 const PARALLELENABLER = ParallelEnabler()
 
-export GitHubPersonalAccessToken, queries, setup, setup_parallel,
+export GitHubPersonalAccessToken, queries, setup, setup_high_prio, setup_parallel, setup_parallel_high_prio,
        Connection, execute, DataFrame, Interval, ZonedDateTime, utc_tz,
        generate_search_query, graphql, JSON3, @sync, @distributed,
        licenses, find_queries, find_repos, query_commits_simple, query_commits,

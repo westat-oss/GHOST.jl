@@ -1,0 +1,14 @@
+fragment b on Node {
+  id
+  ... on User {
+    bio
+    company
+    pronouns
+    isDeveloperProgramMember
+    isEmployee
+    updatedAt
+    twitterUsername
+    websiteUrl
+    location
+  }
+}

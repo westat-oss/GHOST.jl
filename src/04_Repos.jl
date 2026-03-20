@@ -5,8 +5,8 @@ Parses a node and returns a suitable `NamedTuple` for the table.
 """
 function parse_repo(node, spdx::AbstractString)
     (;id, createdAt, nameWithOwner, description, primaryLanguage, defaultBranchRef, 
-      repositoryTopics, forkCount, isInOrganization, homepageUrl, dependencyGraphManifests,
-      stargazerCount,  watchers, releases, issues) = node
+      repositoryTopics, forkCount, isInOrganization, homepageUrl,
+      stargazerCount,  watchers) = node
     (id = id,
      spdx = spdx,
      slug = nameWithOwner,
@@ -19,16 +19,13 @@ function parse_repo(node, spdx::AbstractString)
      forks = isnothing(forkCount) ? missing : forkCount,
      isinorganization = isInOrganization,
      homepageurl = isnothing(homepageUrl) ? missing : homepageUrl,
-     dependencies = getproperty.(
-            filter(x -> !isnothing(x), getproperty.(getproperty.(
-                vcat(getproperty.(getproperty.(getproperty.(dependencyGraphManifests.edges, :node), :dependencies), :edges)...), 
-                :node), :repository)), 
-            :nameWithOwner),
+     dependencies = missing,
      stargazers = isnothing(stargazerCount) ? missing : stargazerCount,
      watchers = isnothing(watchers) ? 0 : watchers.totalCount,
-     releases = isnothing(releases) ? 0 : releases.totalCount,
-     issues = isnothing(issues) ? 0 : issues.totalCount,
-     commits = isnothing(defaultBranchRef) ? 0 : defaultBranchRef.target.history.totalCount,
+     releases = -1,
+     issues = -1,
+     commits = isnothing(defaultBranchRef) || isnothing(defaultBranchRef.target) ? 
+        0 : defaultBranchRef.target.history.totalCount,
     )
     #= Additional repo attribute candidates:
         source: https://docs.github.com/en/graphql/reference/objects#repository
@@ -86,24 +83,29 @@ function find_repos(batch::AbstractDataFrame)
         strip |>
         string;
     #vars = Dict("until" => "$(parse(Int, match(r"\d{4}$", schema).match) + 1)-01-01T00:00:00Z")
-    vars = Dict("until" => "2024-01-01T00:00:00Z")
+    vars = Dict("until" => "2025-01-01T00:00:00Z")
     while true
         sleep(0.25)
         @info "Running query in find_repos()."
         result = graphql(query, vars = vars)
         :Data ∈ propertynames(result) || return result
         json = JSON3.read(result.Data)
-        @info json
-        new_data = reduce(vcat,
-            DataFrame(parse_repo(node.node, spdx) for node in elem.edges)
-            for (elem, spdx) in zip(values(json.data), batch[!,:spdx]))
-        @info new_data
-        append!(output, new_data)
-        any(elem -> elem.pageInfo.hasNextPage, values(json.data)) || break
-        for idx in eachindex(json.data)
-            if !isnothing(json.data[idx].pageInfo.endCursor)
-                push!(vars, "cursor$idx" => json.data[idx].pageInfo.endCursor)
+        try
+            new_data = reduce(vcat,
+                DataFrame(parse_repo(node.node, spdx) for node in elem.edges)
+                for (elem, spdx) in zip(values(json.data), batch[!,:spdx]))
+            append!(output, new_data)
+            any(elem -> elem.pageInfo.hasNextPage, values(json.data)) || break
+            for idx in eachindex(json.data)
+                if !isnothing(json.data[idx].pageInfo.endCursor)
+                    push!(vars, "cursor$idx" => json.data[idx].pageInfo.endCursor)
+                end
             end
+        catch err
+            @error "Got bad JSON in find_repos()"
+            @error batch
+            @error json
+            sleep(15)
         end
     end
     execute(conn, "BEGIN;")
@@ -114,12 +116,26 @@ function find_repos(batch::AbstractDataFrame)
                  ") ON CONFLICT DO NOTHING;"))
     execute(conn, "COMMIT;")
     for row in eachrow(batch)
-        execute(conn,
-                """
-                UPDATE $schema.queries
-                SET done = true
-                WHERE spdx = '$(row.spdx)' AND '$(row.created.first)'::timestamp <@ created
-                ;
-                """)
+        retries = 0
+        insert_successful = false
+        max_retries = 6
+        while !insert_successful && retries < max_retries
+            try
+                retries += 1
+                execute(conn,
+                        """
+                        UPDATE $schema.queries
+                        SET done = true
+                        WHERE spdx = '$(row.spdx)' AND '$(row.created.first)'::timestamp <@ created
+                        ;
+                        """)
+                insert_successful = true
+            catch err
+                @error err
+                sleep_seconds = 15 * retries
+                @info "Sleeping $sleep_seconds seconds after error in while loop to save repos tp pgsql, retry $retries of $max_retries."
+                sleep(sleep_seconds)
+            end
+        end
     end
 end

@@ -1,0 +1,7 @@
+query FindIDFromName($reponame: String!, $repoowner : String!) {
+    repository (name: $reponame, owner: $repoowner)  {
+          defaultBranchRef { 
+              id
+          }
+    }
+}

@@ -14,7 +14,7 @@ data = [ @view(data[i:min(i + 99, lastindex(data))]) for i in 1:100:length(data)
 function magic(nodes::AbstractVector)
     query = "fragment X on Ref { id target { ... on Commit { history(until: \$until) { totalCount } } } } query Commits(\$x:[ID!]!, \$until:GitTimestamp!){nodes(ids:\$x){...X}}"
     vars = Dict("x" => nodes, "until" => "2020-01-01T00:00:00Z")
-    @info "Running query in magic for {$nodes}."
+    @info "Running query in magic for $nodes."
     result = graphql(query, vars = vars)
     json = JSON3.read(result.Data)
     try

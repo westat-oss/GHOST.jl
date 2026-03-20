@@ -1,7 +1,7 @@
 WITH A AS (
     SELECT spdx,
         created,
-        CEIL(count::real / 2) queries
+        CEIL(count::real / 10) queries
     FROM ghost.queries
     WHERE NOT done
     ORDER BY queries DESC,
@@ -17,7 +17,7 @@ B AS (
                 ORDER BY queries DESC,
                     spdx,
                     created
-            )::real / 2
+            )::real / 10
         )::smallint AS query_group
     FROM A
 )
